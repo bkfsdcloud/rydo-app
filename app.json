@@ -7,9 +7,17 @@
     "icon": "./assets/images/icon.png",
     "scheme": "rydoapp",
     "userInterfaceStyle": "automatic",
+    "extra": {
+      "eas": {
+        "projectId": "rydo-eas-project-id"
+      }
+    },
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "config": {
+        "googleMapsApiKey": "AIzaSyDqaqO6czuq1cTzTetNJU6yhnQP2b6_k8U"
+      }
     },
     "android": {
       "adaptiveIcon": {
