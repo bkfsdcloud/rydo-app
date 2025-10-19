@@ -1,6 +1,7 @@
 import React, { useContext, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { genOtp, verifyOtp } from '../../api/userApi';
+import Toast from 'react-native-toast-message';
+import { genOtp, verifyOtp } from '../../../scripts/api/userApi';
 import AuthContext from '../../context/AuthContext';
 
 export default function LoginScreen({ navigation }) {
@@ -25,7 +26,8 @@ export default function LoginScreen({ navigation }) {
     try {
       const response = await genOtp(phone);
       setGenerateOtp(true);
-      Alert.alert('Success', response.data.message);
+      Toast.show({type: 'success', text1: 'Success', text2: response.data.message, position: 'top', });
+      // Alert.alert('Success', response.data.message);
     } catch (error) {
        console.log(error);
     }
@@ -39,6 +41,7 @@ export default function LoginScreen({ navigation }) {
     try {
       const response = await verifyOtp(phone, otp);
       await saveToken(response.data.data);
+      Toast.show({type: 'success', text1: 'Success', text2: response.data.message, position: 'top', });
       // Alert.alert('Success', response.data.message);
     } catch (error) {
        console.log(error);
@@ -47,27 +50,28 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Rydo Login</Text>
       <TextInput
         placeholder="Phone"
         keyboardType="numeric"
+        maxLength="10"
         value={phone}
         placeholderTextColor="#888"
         onChangeText={setPhone}
         style={styles.input}
       />
       {
-        generateOtp ? (
+        generateOtp && (
       <TextInput
         autoFocus
         placeholder="OTP"
+        maxLength="6"
         keyboardType="numeric"
         placeholderTextColor="#888"
         value={otp}
         onChangeText={setOtp}
         style={styles.input}
       />
-        ) : ('')
+        )
       }
       <View style={styles.roleRow}>
         {

@@ -1,8 +1,8 @@
 import { Button } from '@react-navigation/elements';
 import { useContext, useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
+import { SOCKET_URL } from '../../scripts/constants';
 import AuthContext from '../context/AuthContext';
-import { SOCKET_URL } from '../utils/constants';
 
 export default function WebSocketTest() {
   const [messages, setMessages] = useState([]);

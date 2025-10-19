@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { signUp } from '../api/userApi';
+import { Alert, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import Toast from 'react-native-toast-message';
+import { signUp } from '../../scripts/api/userApi';
 
 export default function SignUp({navigation}) {
 
     const [user, setUser] = useState({});
+    const [isEnabled, setIsEnabled] = useState(true);
+    const toggleSwitch = () => setIsEnabled(previousState => !previousState);
 
     const updateUser = (field, value) => {
         setUser(prev => ({ ...prev, [field]: value }));
@@ -17,9 +20,10 @@ export default function SignUp({navigation}) {
               return;
             }
 
-            const response = await signUp(user);
+            const response = await signUp({...user, role: isEnabled ? 'CUSTOMER' : 'DRIVER'});
             if (response.data.status === 'SUCCESS') {
-              Alert.alert('Success', response.data.message);
+              // Alert.alert('Success', response.data.message);
+              Toast.show({type: 'success', text1: 'Success', text2: response.data.message, position: 'top', });
               setUser({});
               navigation.navigate('Login');
             } else {
@@ -32,7 +36,6 @@ export default function SignUp({navigation}) {
 
      return (
     <View style={styles.container}>
-      <Text style={styles.title}>Rydo SignUp</Text>
       <TextInput
         placeholder="Username"
         name="name"
@@ -58,10 +61,20 @@ export default function SignUp({navigation}) {
         onChangeText={value => updateUser('email', value)}
         style={styles.input}
       />
+      <View style={styles.row}>
+      <Text>Rider</Text>
+      <Switch
+        trackColor={{false: '#767577', true: '#81b0ff'}}
+        thumbColor={isEnabled ? '#fff' : '#f4f3f4'}
+        ios_backgroundColor="#3e3e3e"
+        onValueChange={toggleSwitch}
+        value={isEnabled}
+      />
+      </View>
 
       <View style={styles.roleRow}>
 
-      <TouchableOpacity onPress={() => setUser({})} style={[styles.roleBtn]}>
+      <TouchableOpacity onPress={() => [setUser({}), Toast.show({type: 'success', text1: 'Success', text2: 'Test', position: 'top', })]} style={[styles.roleBtn]}>
         <Text>Clear</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={handleSubmit} style={[styles.roleBtn]}>
@@ -80,5 +93,6 @@ const styles = StyleSheet.create({
   roleRow:{ flexDirection:'row', marginBottom:12 },
   roleBtn:{ padding:10, marginHorizontal:6, borderWidth:1, borderRadius:6 },
   roleActive:{ backgroundColor:'#ddd' },
-  hint:{ marginTop:12, color:'#666' }
+  hint:{ marginTop:12, color:'#666' },
+  row: {justifyContent: 'space-around', alignSelf: 'flex-start'},
 });

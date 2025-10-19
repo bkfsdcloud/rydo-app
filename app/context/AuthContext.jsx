@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useEffect, useState } from 'react';
-import { loadUserProfile } from '../api/userApi';
+import { loadUserProfile } from '../../scripts/api/userApi';
 
 /**
  * Mock auth context

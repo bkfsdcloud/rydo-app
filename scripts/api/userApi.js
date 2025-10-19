@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { Alert } from 'react-native';
-import { API_URL } from '../utils/constants';
-import { loadingRef } from '../utils/loadingRef';
+import { API_URL } from '../constants';
+import { getLoadingRef } from '../loadingRef';
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -54,8 +54,7 @@ ErrorUtils.setGlobalHandler((error, isFatal) => {
 
 api.interceptors.request.use(
   async (config) => {
-    console.log(config.url)
-    loadingRef.current?.setLoading(true); // show loader
+    getLoadingRef().setLoading(true); // show loader
     const token = await AsyncStorage.getItem('userToken'); // get token
     console.log(token)
     if (token) {
@@ -64,7 +63,7 @@ api.interceptors.request.use(
     return config;
   },
   error => {
-    loadingRef.current?.setLoading(false);
+    getLoadingRef().setLoading(false);
     return Promise.reject(error);
   }
 );
@@ -72,11 +71,11 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   response => {
     console.log(response.data);
-    loadingRef.current?.setLoading(false); // hide loader
+    getLoadingRef().setLoading(false); // hide loader
     return response;
   }, // Pass successful responses
   async error => {
-    loadingRef.current?.setLoading(false);
+    getLoadingRef().setLoading(false);
     
     if (error.response) {
       console.log(error.response.data);
