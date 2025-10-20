@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useRef, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { genOtp, verifyOtp } from '../../../scripts/api/userApi';
@@ -9,6 +9,7 @@ export default function LoginScreen({ navigation }) {
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [generateOtp, setGenerateOtp] = useState(false);
+  const otpRef = useRef(null);
 
   const { saveToken } = useContext(AuthContext);
 
@@ -27,6 +28,7 @@ export default function LoginScreen({ navigation }) {
       const response = await genOtp(phone);
       setGenerateOtp(true);
       Toast.show({type: 'success', text1: 'Success', text2: response.data.message, position: 'top', });
+      otpRef?.current?.focus();
       // Alert.alert('Success', response.data.message);
     } catch (error) {
        console.log(error);
@@ -51,9 +53,10 @@ export default function LoginScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <TextInput
+        autoFocus
         placeholder="Phone"
         keyboardType="numeric"
-        maxLength="10"
+        // maxLength="10"
         value={phone}
         placeholderTextColor="#888"
         onChangeText={setPhone}
@@ -62,9 +65,9 @@ export default function LoginScreen({ navigation }) {
       {
         generateOtp && (
       <TextInput
-        autoFocus
+        ref={otpRef}
         placeholder="OTP"
-        maxLength="6"
+        // maxLength="6"
         keyboardType="numeric"
         placeholderTextColor="#888"
         value={otp}

@@ -1,22 +1,40 @@
-import { useContext } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { LocationContext } from '@/app/context/LocationContext';
+import { useContext, useState } from 'react';
+import { StyleSheet } from 'react-native';
+import MapView, { Marker, Polyline } from 'react-native-maps';
 import WebSocketTest from '../../component/webSocketTest';
-import AuthContext from '../../context/AuthContext';
 
 export default function DriverHome() {
-  const { user, logout } = useContext(AuthContext);
+
+  const [originCoord, setOriginCoord] = useState({});
+  const [destCoord, setDestCoord] = useState({});
+  const [polyline, setPolyline] = useState([]);
+
+  const { location, refresh } = useContext(LocationContext);
 
   return (
     <>
-      <View style={{flex: 0.2,alignItems:'center',flexDirection: 'row',justifyContent:'space-evenly'}}>
-        <Text>Welcome, {user.name}</Text>
-        <TouchableOpacity style={styles.button} onPress={logout}>
-          <Text>Logout</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.container}>
-        <Text>Driver features (accept ride, go online) to be implemented.</Text>
-      </View>
+      <MapView
+        style={StyleSheet.absoluteFill}
+        followsUserLocation={true}
+        showsUserLocation={true}
+        initialRegion={{
+          latitude: location.latitude,
+          longitude: location.longitude,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        }}
+        region={{
+          latitude: originCoord.lat || location.latitude ,
+          longitude: originCoord.lng || location.longitude ,
+          latitudeDelta: destCoord.lat || 0.05,
+          longitudeDelta: destCoord.lng || 0.05,
+        }}
+      >
+          <Marker coordinate={{ latitude: location.latitude, longitude: location.longitude }} title="Origin" />
+          <Marker coordinate={{ latitude: destCoord.lat || 0.05, longitude: destCoord.lng || 0.05 }} title="Destination" />
+          {polyline.length > 0 && <Polyline coordinates={polyline} strokeWidth={5} strokeColor="blue" />}
+        </MapView>
 
       <WebSocketTest></WebSocketTest>
     </>

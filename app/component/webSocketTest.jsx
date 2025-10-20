@@ -1,14 +1,17 @@
 import { Button } from '@react-navigation/elements';
 import { useContext, useEffect, useRef, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Alert, Text, View } from 'react-native';
 import { SOCKET_URL } from '../../scripts/constants';
 import AuthContext from '../context/AuthContext';
+import { LocationContext } from '../context/LocationContext';
 
 export default function WebSocketTest() {
   const [messages, setMessages] = useState([]);
   const [status, setStatus] = useState('Connecting...');
   const wsRef = useRef(null);
   const { token } = useContext(AuthContext);
+
+  const { location, refresh } = useContext(LocationContext);
 
   useEffect(() => {
     const ws = new WebSocket(SOCKET_URL, undefined,
@@ -23,11 +26,12 @@ export default function WebSocketTest() {
     ws.onopen = () => {
       console.log('Connected');
       setStatus('Connected');
-      ws.send(JSON.stringify({ action: 'send', message: 'Hello from device' }));
+      ws.send(JSON.stringify({ action: 'init', coordinate: { lat: location?.latitude, lng: location?.longitude}, message: 'Driver logged in' }));
     };
 
     ws.onmessage = (event) => {
       console.log('Received:', event.data);
+      Alert.alert('Notification', event.data);
       setMessages((prev) => [...prev, event.data]);
     };
 
@@ -56,22 +60,28 @@ export default function WebSocketTest() {
 
   return (
     <View style={{ flex: 1, padding: 20 }}>
-      <Text>Status: {status}</Text>
+      {/* <Text>Status: {status}</Text>
       {messages.map((msg, idx) => (
         <Text key={idx}>Message: {msg}</Text>
-      ))}
+      ))} */}
 
       <Button
         title="Send Location Update"
+         style={{
+          alignSelf: 'center',
+          backgroundColor: '#007AFF',
+          padding: 15,
+          borderRadius: 10,
+        }}
         onPress={() =>
           sendMessage({
             action: 'track',
-            latitude: 12.345,
-            longitude: 77.456,
-            ts: new Date().toISOString(),
+            coordinate: { lat: location?.latitude, lng: location?.longitude}
           })
         }
-      />
+      >
+        <Text style={{ color: '#fff', fontWeight: 'bold' }}>Ping</Text>
+        </Button>
     </View>
   );
 }

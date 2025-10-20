@@ -4,16 +4,19 @@ import Toast from 'react-native-toast-message';
 import LoadingModal from './component/LoadingModal';
 import { AuthProvider } from './context/AuthContext';
 import { LoadingProvider } from './context/LoadingContext';
+import { LocationProvider } from './context/LocationContext';
 import RootNavigator from './navigation/RootNavigator';
 
 export default function App() {
   return (
     <AuthProvider>
       <LoadingProvider>
-        <RootNavigator />
+        <LocationProvider>
+          <RootNavigator />
+        </LocationProvider>
         <StatusBar style="auto" />
-         <LoadingModal />
-         <Toast />
+        <LoadingModal />
+        <Toast />
       </LoadingProvider>
     </AuthProvider>
   );

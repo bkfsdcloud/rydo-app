@@ -1,5 +1,8 @@
+import { LocationContext } from "@/app/context/LocationContext";
+import { getAvailable } from "@/scripts/api/driverApi";
 import { handleAutocomplete, handleGetRoute } from "@/scripts/api/geoApi";
-import { useRef, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { useContext, useEffect, useRef, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -13,7 +16,7 @@ import {
 import MapView, { Marker, Polyline } from "react-native-maps";
 import RideSummaryModal from './RideSummaryModal';
 
-export default function MapScreen() {
+export default function MapScreen({navigation}) {
 
   const [origin, setOrigin] = useState({place_id:'',description:''});
   const [destination, setDestination] = useState({place_id:'',description:''});
@@ -24,8 +27,8 @@ export default function MapScreen() {
   const [distance, setDistance] = useState(null);
   const [fare, setFare] = useState(null);
 
-  const [originCoord, setOriginCoord] = useState({ lat: 12.9716, lng: 77.5946 });
-  const [destCoord, setDestCoord] = useState({ lat: 12.9716, lng: 77.5946 });
+  const [originCoord, setOriginCoord] = useState({});
+  const [destCoord, setDestCoord] = useState({ lat: 0.05, lng: 0.05 });
   const [polyline, setPolyline] = useState([]);
 
   const originDebounce = useRef(null);
@@ -34,6 +37,14 @@ export default function MapScreen() {
   const [showModal, setShowModal] = useState(false);
   const [transportMode, setTransportMode] = useState('Car');
   const [paymentMethod, setPaymentMethod] = useState('Cash');
+  const { location, refresh } = useContext(LocationContext);
+
+  const [drivers, setDrivers] = useState([]);
+
+  const getAllDrivers = async () => {
+     const response = await getAvailable({radiusKm: 10, coordinate: { lat: location.latitude, lng: location.longitude }});
+     setDrivers(response.data || []);
+  }
 
   const handleSelectOrigin = (item) => {
     setOrigin(item);
@@ -64,20 +75,33 @@ export default function MapScreen() {
     // call your backend API here
   };
 
+  useEffect(() => {
+     getAllDrivers();
+  }, [])
+
   return (
     <>
       <View style={styles.container}>
         <MapView
           style={styles.map}
+          followsUserLocation={true}
+          showsUserLocation={true}
           initialRegion={{
-            latitude: originCoord.lat,
-            longitude: originCoord.lng,
+            latitude: location.latitude,
+            longitude: location.longitude,
             latitudeDelta: 0.05,
             longitudeDelta: 0.05,
           }}
         >
-          <Marker coordinate={{ latitude: originCoord.lat, longitude: originCoord.lng }} title="Origin" />
+          <Marker coordinate={{ latitude: originCoord.lat || location.latitude, longitude: originCoord.lng || location.longitude }} title="Origin" />
           <Marker coordinate={{ latitude: destCoord.lat, longitude: destCoord.lng }} title="Destination" />
+          {
+            drivers?.map(((driver, idx) => (
+               <Marker key={idx} coordinate={{ latitude: driver.coordinate.lat, longitude: driver.coordinate.lng }} icon={
+                <Ionicons name='car-outline' size='10' color='red' />
+               } title="Destination" />
+            )))
+          }
           {polyline.length > 0 && <Polyline coordinates={polyline} strokeWidth={5} strokeColor="blue" />}
         </MapView>
 
@@ -93,24 +117,12 @@ export default function MapScreen() {
         setPaymentMethod={setPaymentMethod}
       />
 
-        {/* Overlay UI */}
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={StyleSheet.absoluteFill}
           pointerEvents="box-none"
         >
           <View style={styles.overlayContainer}>
-            {/* {distance && (
-              <Text style={styles.info}>
-                Distance: {distance.distanceTxt} | Duration: {distance.durationMins}
-              </Text>
-            )}
-
-            {fare && (
-              <Text style={styles.info}>
-                Estimated Fare: ₹{fare.fare.toFixed(2)} for {fare.distanceKm.toFixed(2)} km
-              </Text>
-            )} */}
 
             <View style={styles.inputContainer}>
               <TextInput
@@ -133,6 +145,11 @@ export default function MapScreen() {
                 placeholder="Enter Origin"
                 style={styles.input}
               />
+              {origin.description.length > 0 && (
+                <TouchableOpacity onPress={() => setOrigin({place_id:'',description:''})} style={styles.clearButton}>
+                  <Ionicons name="close-circle" size={20} color="#666" />
+                </TouchableOpacity>
+              )}
               {showOriginDropdown && (
                 <FlatList
                   data={originSuggestions}
@@ -169,6 +186,11 @@ export default function MapScreen() {
                 placeholder="Enter Destination"
                 style={styles.input}
               />
+              {destination.description.length > 0 && (
+                <TouchableOpacity onPress={() => setDestination({place_id:'',description:''})} style={styles.clearButton}>
+                  <Ionicons name="close-circle" size={20} color="#666" />
+                </TouchableOpacity>
+              )}
               {showDestDropdown && (
                 <FlatList
                   data={destSuggestions}
@@ -183,8 +205,9 @@ export default function MapScreen() {
                 />
               )}
             </View>
-            <TouchableOpacity
-        style={{
+            <View style={{flex: 1, flexDirection: 'row', justifyContent: 'space-around'}}>
+              <TouchableOpacity
+             style={{
           alignSelf: 'center',
           backgroundColor: '#007AFF',
           padding: 15,
@@ -194,6 +217,18 @@ export default function MapScreen() {
       >
         <Text style={{ color: '#fff', fontWeight: 'bold' }}>Search Ride</Text>
       </TouchableOpacity>
+      <TouchableOpacity
+        style={{
+          alignSelf: 'center',
+          backgroundColor: '#007AFF',
+          padding: 15,
+          borderRadius: 10,
+        }}
+        onPress={() => getAllDrivers()}
+      >
+        <Text style={{ color: '#fff', fontWeight: 'bold' }}>Check Drivers</Text>
+      </TouchableOpacity>
+            </View>
             
           </View>
         </KeyboardAvoidingView>
@@ -233,4 +268,9 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   item: { padding: 10, borderBottomWidth: 1, borderBottomColor: "#eee" },
+  clearButton: {
+    position: 'absolute',
+    right: 10,
+    top: 12,
+  },
 });
