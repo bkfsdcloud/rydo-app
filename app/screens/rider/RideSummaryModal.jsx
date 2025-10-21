@@ -1,7 +1,7 @@
 // RideSummaryModal.jsx
-import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Modal from 'react-native-modal';
+import { Ionicons } from "@expo/vector-icons";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Modal from "react-native-modal";
 
 export default function RideSummaryModal({
   visible,
@@ -14,6 +14,9 @@ export default function RideSummaryModal({
   paymentMethod,
   setPaymentMethod,
 }) {
+  const vehicles = ["Car"];
+  const paymentModes = ["Cash", "UPI", "Card"];
+
   return (
     <Modal
       isVisible={visible}
@@ -34,7 +37,7 @@ export default function RideSummaryModal({
         {/* Transport Options */}
         <Text style={styles.label}>Select Transport</Text>
         <View style={styles.row}>
-          {['Car', 'Auto'].map((mode) => (
+          {vehicles.map((mode) => (
             <TouchableOpacity
               key={mode}
               style={[
@@ -44,9 +47,9 @@ export default function RideSummaryModal({
               onPress={() => setTransportMode(mode)}
             >
               <Ionicons
-                name={mode === 'Car' ? 'car-outline' : 'bicycle-outline'}
+                name={mode === "Car" ? "car-outline" : "bicycle-outline"}
                 size={22}
-                color={transportMode === mode ? '#fff' : '#333'}
+                color={transportMode === mode ? "#fff" : "#333"}
               />
               <Text
                 style={[
@@ -63,7 +66,7 @@ export default function RideSummaryModal({
         {/* Payment Method */}
         <Text style={styles.label}>Payment Method</Text>
         <View style={styles.row}>
-          {['Cash', 'UPI', 'Card'].map((method) => (
+          {paymentModes.map((method) => (
             <TouchableOpacity
               key={method}
               style={[
@@ -74,14 +77,14 @@ export default function RideSummaryModal({
             >
               <Ionicons
                 name={
-                  method === 'Cash'
-                    ? 'cash-outline'
-                    : method === 'UPI'
-                    ? 'qr-code-outline'
-                    : 'card-outline'
+                  method === "Cash"
+                    ? "cash-outline"
+                    : method === "UPI"
+                    ? "qr-code-outline"
+                    : "card-outline"
                 }
                 size={22}
-                color={paymentMethod === method ? '#fff' : '#333'}
+                color={paymentMethod === method ? "#fff" : "#333"}
               />
               <Text
                 style={[
@@ -105,9 +108,9 @@ export default function RideSummaryModal({
 }
 
 const styles = StyleSheet.create({
-  modal: { justifyContent: 'flex-end', margin: 0 },
+  modal: { justifyContent: "flex-end", margin: 0 },
   container: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 20,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -115,32 +118,32 @@ const styles = StyleSheet.create({
   handle: {
     width: 50,
     height: 5,
-    backgroundColor: '#ccc',
+    backgroundColor: "#ccc",
     borderRadius: 10,
-    alignSelf: 'center',
+    alignSelf: "center",
     marginBottom: 15,
   },
-  heading: { fontSize: 18, fontWeight: 'bold', marginBottom: 8 },
-  subText: { fontSize: 15, color: '#555', marginBottom: 5 },
-  label: { marginTop: 15, fontSize: 16, fontWeight: '500', marginBottom: 8 },
-  row: { flexDirection: 'row', gap: 10 },
+  heading: { fontSize: 18, fontWeight: "bold", marginBottom: 8 },
+  subText: { fontSize: 15, color: "#555", marginBottom: 5 },
+  label: { marginTop: 15, fontSize: 16, fontWeight: "500", marginBottom: 8 },
+  row: { flexDirection: "row", gap: 10 },
   option: {
     flex: 1,
     padding: 10,
-    backgroundColor: '#f2f2f2',
+    backgroundColor: "#f2f2f2",
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
-  selectedOption: { backgroundColor: '#007AFF' },
-  optionText: { marginTop: 5, fontSize: 14, color: '#333' },
-  optionTextSelected: { color: '#fff' },
+  selectedOption: { backgroundColor: "#007AFF" },
+  optionText: { marginTop: 5, fontSize: 14, color: "#333" },
+  optionTextSelected: { color: "#fff" },
   button: {
     marginTop: 20,
-    backgroundColor: '#007AFF',
+    backgroundColor: "#007AFF",
     paddingVertical: 12,
     borderRadius: 10,
-    alignItems: 'center',
+    alignItems: "center",
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
 });

@@ -4,6 +4,7 @@ import { handleAutocomplete, handleGetRoute } from "@/scripts/api/geoApi";
 import { Ionicons } from "@expo/vector-icons";
 import { useContext, useEffect, useRef, useState } from "react";
 import {
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -11,15 +12,18 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
-import RideSummaryModal from './RideSummaryModal';
+import WebSocketService from "../../../scripts/WebSocketService";
+import RideSummaryModal from "./RideSummaryModal";
 
-export default function MapScreen({navigation}) {
-
-  const [origin, setOrigin] = useState({place_id:'',description:''});
-  const [destination, setDestination] = useState({place_id:'',description:''});
+export default function MapScreen({ navigation }) {
+  const [origin, setOrigin] = useState({ place_id: "", description: "" });
+  const [destination, setDestination] = useState({
+    place_id: "",
+    description: "",
+  });
   const [originSuggestions, setOriginSuggestions] = useState([]);
   const [destSuggestions, setDestSuggestions] = useState([]);
   const [showOriginDropdown, setShowOriginDropdown] = useState(false);
@@ -33,18 +37,24 @@ export default function MapScreen({navigation}) {
 
   const originDebounce = useRef(null);
   const destDebounce = useRef(null);
-  
+
   const [showModal, setShowModal] = useState(false);
-  const [transportMode, setTransportMode] = useState('Car');
-  const [paymentMethod, setPaymentMethod] = useState('Cash');
+  const [transportMode, setTransportMode] = useState("Car");
+  const [paymentMethod, setPaymentMethod] = useState("Cash");
   const { location, refresh } = useContext(LocationContext);
 
   const [drivers, setDrivers] = useState([]);
+  const [receivedData, setReceivedData] = useState(null);
 
   const getAllDrivers = async () => {
-     const response = await getAvailable({radiusKm: 10, coordinate: { lat: location.latitude, lng: location.longitude }});
-     setDrivers(response.data || []);
-  }
+    const response = await getAvailable({
+      radiusKm: 10,
+      coordinate: { lat: location.latitude, lng: location.longitude },
+    });
+    console.log("Driver updated");
+    WebSocketService.addListener(handleMessage);
+    setDrivers(response.data || []);
+  };
 
   const handleSelectOrigin = (item) => {
     setOrigin(item);
@@ -58,9 +68,27 @@ export default function MapScreen({navigation}) {
     setDestCoord(item.location || destCoord);
   };
 
+  const resetOriginSuggestion = () => {
+    setOriginSuggestions([]);
+    setShowOriginDropdown(false);
+  };
+
+  const resetDestSuggestion = () => {
+    setDestSuggestions([]);
+    setShowDestDropdown(false);
+  };
+
+  const [markerPosition, setMarkerPosition] = useState({
+    latitude: location.latitude,
+    longitude: location.longitude,
+  });
+
   const handleRoute = async () => {
     if (!origin.place_id || !destination.place_id) return;
-    const res = await handleGetRoute({ originPlaceId: origin.place_id, destPlaceId: destination.place_id });
+    const res = await handleGetRoute({
+      originPlaceId: origin.place_id,
+      destPlaceId: destination.place_id,
+    });
     setPolyline(res.data.coordinates);
     setOriginCoord(res.data.originCoord);
     setDestCoord(res.data.destCoord);
@@ -71,20 +99,27 @@ export default function MapScreen({navigation}) {
 
   const handleBookRide = () => {
     setShowModal(false);
-    console.log('Ride Booked with', { transportMode, paymentMethod });
+    console.log("Ride Booked with", { transportMode, paymentMethod });
     // call your backend API here
   };
 
+  const handleMessage = (msg) => {
+    console.log("📨 Message from server:", msg);
+    setReceivedData(msg);
+    Alert.alert("Notification", msg);
+  };
+
   useEffect(() => {
-     getAllDrivers();
-  }, [])
+    WebSocketService.addListener(handleMessage);
+    return () => WebSocketService.removeListener(handleMessage);
+  });
 
   return (
     <>
       <View style={styles.container}>
         <MapView
+          paddingAdjustmentBehavior="automatic"
           style={styles.map}
-          followsUserLocation={true}
           showsUserLocation={true}
           initialRegion={{
             latitude: location.latitude,
@@ -92,30 +127,73 @@ export default function MapScreen({navigation}) {
             latitudeDelta: 0.05,
             longitudeDelta: 0.05,
           }}
+          onRegionChange={(newRegion) => {
+            setMarkerPosition({
+              latitude: newRegion.latitude,
+              longitude: newRegion.longitude,
+            });
+          }}
         >
-          <Marker coordinate={{ latitude: originCoord.lat || location.latitude, longitude: originCoord.lng || location.longitude }} title="Origin" />
-          <Marker coordinate={{ latitude: destCoord.lat, longitude: destCoord.lng }} title="Destination" />
-          {
-            drivers?.map(((driver, idx) => (
-               <Marker key={idx} coordinate={{ latitude: driver.coordinate.lat, longitude: driver.coordinate.lng }} icon={
-                <Ionicons name='car-outline' size='10' color='red' />
-               } title="Destination" />
-            )))
-          }
-          {polyline.length > 0 && <Polyline coordinates={polyline} strokeWidth={5} strokeColor="blue" />}
+          {location.latitude && (
+            <Marker
+              coordinate={markerPosition}
+              pinColor="green"
+              title="Your location"
+              move
+            />
+          )}
+          {originCoord.lat && (
+            <Marker
+              coordinate={{
+                latitude: originCoord.lat,
+                longitude: originCoord.lng,
+              }}
+              title="Origin"
+            />
+          )}
+          {destCoord.lat && (
+            <Marker
+              coordinate={{ latitude: destCoord.lat, longitude: destCoord.lng }}
+              title="Destination"
+            />
+          )}
+          {drivers?.map((driver, idx) => (
+            <Marker
+              key={idx}
+              coordinate={{
+                latitude: driver.coordinate.lat,
+                longitude: driver.coordinate.lng,
+              }}
+              // image={require("../../../assets/images/car.png")}
+              title={driver.driverId}
+            />
+          ))}
+          {polyline.length > 0 && (
+            <Polyline
+              coordinates={polyline}
+              strokeWidth={5}
+              strokeColor="blue"
+            />
+          )}
+          <Polyline
+            coordinates={[location, markerPosition]}
+            strokeWidth={2}
+            strokeColor="green"
+            lineDashPattern={[5, 10]}
+          />
         </MapView>
 
-      <RideSummaryModal
-        visible={showModal}
-        onClose={() => setShowModal(false)}
-        onConfirm={handleBookRide}
-        distance={distance}
-        fare={fare}
-        transportMode={transportMode}
-        setTransportMode={setTransportMode}
-        paymentMethod={paymentMethod}
-        setPaymentMethod={setPaymentMethod}
-      />
+        <RideSummaryModal
+          visible={showModal}
+          onClose={() => setShowModal(false)}
+          onConfirm={handleBookRide}
+          distance={distance}
+          fare={fare}
+          transportMode={transportMode}
+          setTransportMode={setTransportMode}
+          paymentMethod={paymentMethod}
+          setPaymentMethod={setPaymentMethod}
+        />
 
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -123,30 +201,58 @@ export default function MapScreen({navigation}) {
           pointerEvents="box-none"
         >
           <View style={styles.overlayContainer}>
-
+            <View style={{ flex: 1 }}>
+              {/* <GooglePlacesAutocomplete
+                placeholder="Search location"
+                fetchDetails={true} // get full place details including lat/lng
+                onPress={(data, details = null) => {
+                  console.log(data, details);
+                }}
+                query={{
+                  key: "AIzaSyDqaqO6czuq1cTzTetNJU6yhnQP2b6_k8U",
+                  language: "en",
+                  components: "country:IN", // restrict to India
+                  types: "geocode", // only addresses
+                  location: "12.9716,77.5946", // optional center bias (Bangalore)
+                  radius: 50000, // 50km radius
+                }}
+                nearbyPlacesAPI="GooglePlacesSearch"
+                debounce={300} // delay for better performance
+              /> */}
+            </View>
             <View style={styles.inputContainer}>
               <TextInput
                 value={origin.description}
                 onChangeText={(text) => {
-                  setOrigin({description: text});
-                  if (originDebounce.current) clearTimeout(originDebounce.current);
-                    originDebounce.current = setTimeout(async () => {
-                      if (text.length < 2) return setOriginSuggestions([]);
-                      try {
-                        const res = await handleAutocomplete({ input: text, sessionToken: "123" });
-                        setOriginSuggestions(res || []);
-                        setShowOriginDropdown(true);
-                      } catch {
-                        setOriginSuggestions([]);
-                        setShowOriginDropdown(false);
-                      }
-                    }, 1000); // 500ms debounce
+                  setOrigin({ description: text });
+                  if (originDebounce.current)
+                    clearTimeout(originDebounce.current);
+                  originDebounce.current = setTimeout(async () => {
+                    if (text.length < 2) return setOriginSuggestions([]);
+                    try {
+                      const res = await handleAutocomplete({
+                        input: text,
+                        // sessionToken: "123",
+                      });
+                      setOriginSuggestions(res || []);
+                      setShowOriginDropdown(true);
+                    } catch {
+                      setOriginSuggestions([]);
+                      setShowOriginDropdown(false);
+                    }
+                  }, 1000); // 500ms debounce
                 }}
                 placeholder="Enter Origin"
                 style={styles.input}
               />
               {origin.description.length > 0 && (
-                <TouchableOpacity onPress={() => setOrigin({place_id:'',description:''})} style={styles.clearButton}>
+                <TouchableOpacity
+                  onPress={() => [
+                    setOrigin({ place_id: "", description: "" }),
+                    resetOriginSuggestion(),
+                  ]}
+                  style={styles.clearButton}
+                >
                   <Ionicons name="close-circle" size={20} color="#666" />
                 </TouchableOpacity>
               )}
@@ -157,7 +263,10 @@ export default function MapScreen({navigation}) {
                   style={styles.dropdown}
                   keyboardShouldPersistTaps="handled"
                   renderItem={({ item }) => (
-                    <TouchableOpacity onPress={() => handleSelectOrigin(item)} style={styles.item}>
+                    <TouchableOpacity
+                      onPress={() => handleSelectOrigin(item)}
+                      style={styles.item}
+                    >
                       <Text>{item.description}</Text>
                     </TouchableOpacity>
                   )}
@@ -169,25 +278,34 @@ export default function MapScreen({navigation}) {
               <TextInput
                 value={destination.description}
                 onChangeText={(text) => {
-                  setDestination({description: text});
+                  setDestination({ description: text });
                   if (destDebounce.current) clearTimeout(destDebounce.current);
-                    destDebounce.current = setTimeout(async () => {
-                      if (text.length < 2) return setDestSuggestions([]);
-                      try {
-                        const res = await handleAutocomplete({ input: text, sessionToken: "123" });
-                        setDestSuggestions(res || []);
-                        setShowDestDropdown(true);
-                      } catch {
-                        setDestSuggestions([]);
-                        setShowDestDropdown(false);
-                      }
-                    }, 1000);
+                  destDebounce.current = setTimeout(async () => {
+                    if (text.length < 2) return setDestSuggestions([]);
+                    try {
+                      const res = await handleAutocomplete({
+                        input: text,
+                        sessionToken: "123",
+                      });
+                      setDestSuggestions(res || []);
+                      setShowDestDropdown(true);
+                    } catch {
+                      setDestSuggestions([]);
+                      setShowDestDropdown(false);
+                    }
+                  }, 1000);
                 }}
                 placeholder="Enter Destination"
                 style={styles.input}
               />
               {destination.description.length > 0 && (
-                <TouchableOpacity onPress={() => setDestination({place_id:'',description:''})} style={styles.clearButton}>
+                <TouchableOpacity
+                  onPress={() => [
+                    setDestination({ place_id: "", description: "" }),
+                    resetDestSuggestion(),
+                  ]}
+                  style={styles.clearButton}
+                >
                   <Ionicons name="close-circle" size={20} color="#666" />
                 </TouchableOpacity>
               )}
@@ -198,38 +316,50 @@ export default function MapScreen({navigation}) {
                   style={styles.dropdown}
                   keyboardShouldPersistTaps="handled"
                   renderItem={({ item }) => (
-                    <TouchableOpacity onPress={() => handleSelectDestination(item)} style={styles.item}>
+                    <TouchableOpacity
+                      onPress={() => handleSelectDestination(item)}
+                      style={styles.item}
+                    >
                       <Text>{item.description}</Text>
                     </TouchableOpacity>
                   )}
                 />
               )}
             </View>
-            <View style={{flex: 1, flexDirection: 'row', justifyContent: 'space-around'}}>
+            <View
+              style={{
+                flex: 1,
+                flexDirection: "row",
+                justifyContent: "space-around",
+              }}
+            >
               <TouchableOpacity
-             style={{
-          alignSelf: 'center',
-          backgroundColor: '#007AFF',
-          padding: 15,
-          borderRadius: 10,
-        }}
-        onPress={() => handleRoute()}
-      >
-        <Text style={{ color: '#fff', fontWeight: 'bold' }}>Search Ride</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={{
-          alignSelf: 'center',
-          backgroundColor: '#007AFF',
-          padding: 15,
-          borderRadius: 10,
-        }}
-        onPress={() => getAllDrivers()}
-      >
-        <Text style={{ color: '#fff', fontWeight: 'bold' }}>Check Drivers</Text>
-      </TouchableOpacity>
+                style={{
+                  alignSelf: "center",
+                  backgroundColor: "#007AFF",
+                  padding: 15,
+                  borderRadius: 10,
+                }}
+                onPress={() => handleRoute()}
+              >
+                <Text style={{ color: "#fff", fontWeight: "bold" }}>
+                  Search Ride
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{
+                  alignSelf: "center",
+                  backgroundColor: "#007AFF",
+                  padding: 15,
+                  borderRadius: 10,
+                }}
+                onPress={() => getAllDrivers()}
+              >
+                <Text style={{ color: "#fff", fontWeight: "bold" }}>
+                  Check Drivers
+                </Text>
+              </TouchableOpacity>
             </View>
-            
           </View>
         </KeyboardAvoidingView>
       </View>
@@ -269,7 +399,7 @@ const styles = StyleSheet.create({
   },
   item: { padding: 10, borderBottomWidth: 1, borderBottomColor: "#eee" },
   clearButton: {
-    position: 'absolute',
+    position: "absolute",
     right: 10,
     top: 12,
   },

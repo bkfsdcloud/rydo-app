@@ -1,18 +1,21 @@
 // LocationContext.js
-import * as Location from 'expo-location';
-import { createContext, useEffect, useState } from 'react';
+import * as Location from "expo-location";
+import { createContext, useEffect, useState } from "react";
 
 export const LocationContext = createContext();
 
 export const LocationProvider = ({ children }) => {
-  const [location, setLocation] = useState({latitude: 12.9716, longitude: 77.5946});
+  const [location, setLocation] = useState({
+    latitude: 12.9716,
+    longitude: 77.5946,
+  });
   const [error, setError] = useState(null);
 
   const getCurrentLocation = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setError('Permission to access location denied');
+      if (status !== "granted") {
+        setError("Permission to access location denied");
         return;
       }
 
@@ -20,7 +23,7 @@ export const LocationProvider = ({ children }) => {
         accuracy: Location.Accuracy.High,
       });
       setLocation(pos.coords);
-      console.log(location)
+      console.log(location);
     } catch (err) {
       setError(err.message);
     }
@@ -41,7 +44,9 @@ export const LocationProvider = ({ children }) => {
   }, []);
 
   return (
-    <LocationContext.Provider value={{ location, error, refresh: getCurrentLocation }}>
+    <LocationContext.Provider
+      value={{ location, error, refresh: getCurrentLocation }}
+    >
       {children}
     </LocationContext.Provider>
   );
