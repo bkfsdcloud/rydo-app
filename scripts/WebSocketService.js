@@ -8,6 +8,7 @@ class WebSocketService {
 
   static getInstance() {
     if (!WebSocketService.instance) {
+        console.log('Websocket instance created')
       WebSocketService.instance = new WebSocketService();
     }
     return WebSocketService.instance;
@@ -27,7 +28,7 @@ class WebSocketService {
     };
 
     this.socket.onmessage = (event) => {
-      console.log(this.listeners);
+      console.log(this.listeners.size);
       this.listeners.forEach((cb) => cb(event.data));
     };
 
@@ -42,7 +43,16 @@ class WebSocketService {
     };
   };
 
+  disconnect = () => {
+    if (this.socket) {
+      console.log('🔌 Closing WebSocket connection');
+      this.socket.close();
+      this.socket = null;
+    }
+  };
+
   send = (message) => {
+    console.log('Removing listener')
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify(message));
     } else {
@@ -51,10 +61,12 @@ class WebSocketService {
   };
 
   addListener = (callback) => {
+    console.log('Adding listener')
     this.listeners.add(callback);
   };
 
   removeListener = (callback) => {
+    console.log('Removing listener')
     this.listeners.delete(callback);
   };
 }

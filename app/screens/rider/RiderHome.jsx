@@ -2,9 +2,8 @@ import { LocationContext } from "@/app/context/LocationContext";
 import { getAvailable } from "@/scripts/api/driverApi";
 import { handleAutocomplete, handleGetRoute } from "@/scripts/api/geoApi";
 import { Ionicons } from "@expo/vector-icons";
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useRef, useState } from "react";
 import {
-  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -15,10 +14,9 @@ import {
   View,
 } from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
-import WebSocketService from "../../../scripts/WebSocketService";
 import RideSummaryModal from "./RideSummaryModal";
 
-export default function MapScreen({ navigation }) {
+export default function MapScreen() {
   const [origin, setOrigin] = useState({ place_id: "", description: "" });
   const [destination, setDestination] = useState({
     place_id: "",
@@ -41,18 +39,16 @@ export default function MapScreen({ navigation }) {
   const [showModal, setShowModal] = useState(false);
   const [transportMode, setTransportMode] = useState("Car");
   const [paymentMethod, setPaymentMethod] = useState("Cash");
-  const { location, refresh } = useContext(LocationContext);
+  const { location } = useContext(LocationContext);
 
   const [drivers, setDrivers] = useState([]);
-  const [receivedData, setReceivedData] = useState(null);
 
   const getAllDrivers = async () => {
     const response = await getAvailable({
       radiusKm: 10,
       coordinate: { lat: location.latitude, lng: location.longitude },
     });
-    console.log("Driver updated");
-    WebSocketService.addListener(handleMessage);
+    console.log("Driver location refreshed");
     setDrivers(response.data || []);
   };
 
@@ -102,17 +98,6 @@ export default function MapScreen({ navigation }) {
     console.log("Ride Booked with", { transportMode, paymentMethod });
     // call your backend API here
   };
-
-  const handleMessage = (msg) => {
-    console.log("📨 Message from server:", msg);
-    setReceivedData(msg);
-    Alert.alert("Notification", msg);
-  };
-
-  useEffect(() => {
-    WebSocketService.addListener(handleMessage);
-    return () => WebSocketService.removeListener(handleMessage);
-  });
 
   return (
     <>
@@ -164,7 +149,6 @@ export default function MapScreen({ navigation }) {
                 latitude: driver.coordinate.lat,
                 longitude: driver.coordinate.lng,
               }}
-              // image={require("../../../assets/images/car.png")}
               title={driver.driverId}
             />
           ))}
@@ -201,25 +185,6 @@ export default function MapScreen({ navigation }) {
           pointerEvents="box-none"
         >
           <View style={styles.overlayContainer}>
-            <View style={{ flex: 1 }}>
-              {/* <GooglePlacesAutocomplete
-                placeholder="Search location"
-                fetchDetails={true} // get full place details including lat/lng
-                onPress={(data, details = null) => {
-                  console.log(data, details);
-                }}
-                query={{
-                  key: "AIzaSyDqaqO6czuq1cTzTetNJU6yhnQP2b6_k8U",
-                  language: "en",
-                  components: "country:IN", // restrict to India
-                  types: "geocode", // only addresses
-                  location: "12.9716,77.5946", // optional center bias (Bangalore)
-                  radius: 50000, // 50km radius
-                }}
-                nearbyPlacesAPI="GooglePlacesSearch"
-                debounce={300} // delay for better performance
-              /> */}
-            </View>
             <View style={styles.inputContainer}>
               <TextInput
                 value={origin.description}
