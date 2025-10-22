@@ -1,8 +1,16 @@
 import AuthContext from "@/app/context/AuthContext";
 import { LocationContext } from "@/app/context/LocationContext";
+import { setupNotificationListeners } from "@/app/service/notificationService";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { useContext, useEffect, useLayoutEffect, useState } from "react";
+import * as Notifications from "expo-notifications";
+import {
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { Alert, StyleSheet, Text } from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
 import WebSocketService from "../../../scripts/WebSocketService";
@@ -17,11 +25,30 @@ export default function DriverHome() {
   const navigation = useNavigation();
 
   const [dutyStatus, setDutyStatus] = useState("AVAILABLE");
+  const responseListener = useRef();
 
   useEffect(() => {
     WebSocketService.connect(token);
     WebSocketService.addListener(handleMessage);
   }, [token]);
+
+  useEffect(() => {
+    setupNotificationListeners();
+
+    // Called when the user taps on a notification
+    responseListener.current =
+      Notifications.addNotificationResponseReceivedListener((response) => {
+        console.log("User tapped notification:", response);
+
+        const rideData = response.notification.request.content.data;
+
+        navigation.navigate(rideData?.screen, { rideId: rideData.rideId });
+      });
+
+    return () => {
+      if (responseListener.current) responseListener.current.remove();
+    };
+  }, []);
 
   const handleMessage = (msg) => {
     console.log("📨 Message from server:", msg);

@@ -39,7 +39,7 @@ class WebSocketService {
     this.socket.onclose = (e) => {
       console.log('⚠️ WebSocket Closed, retrying...');
       this.socket = null;
-    //   setTimeout(() => this.connect(url), 3000); // auto reconnect
+      // setTimeout(() => this.connect(SOCKET_URL), 3000); // auto reconnect
     };
   };
 

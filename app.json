@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "rydo-app",
-    "slug": "rydo-app",
+    "slug": "rydo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -9,8 +9,9 @@
     "userInterfaceStyle": "automatic",
     "extra": {
       "eas": {
-        "projectId": "rydo-eas-project-id"
-      }
+        "projectId": "20541a7f-745f-446d-a3ca-ab7fc03f6a25"
+      },
+      "router": {}
     },
     "newArchEnabled": true,
     "ios": {
@@ -51,6 +52,7 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "owner": "bk5916"
   }
 }

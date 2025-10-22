@@ -15,6 +15,7 @@ export const loginUser = async (phone) => {
 };
 
 export const signUp = async (user) => {
+  console.log(user)
   const response = await api.post('/api/auth/signup', user);
   return response;
 };
