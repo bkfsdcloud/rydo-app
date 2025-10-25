@@ -30,12 +30,8 @@ export default function DriverHome() {
   useEffect(() => {
     WebSocketService.connect(token);
     WebSocketService.addListener(handleMessage);
-  }, [token]);
-
-  useEffect(() => {
     setupNotificationListeners();
 
-    // Called when the user taps on a notification
     responseListener.current =
       Notifications.addNotificationResponseReceivedListener((response) => {
         console.log("User tapped notification:", response);
@@ -47,12 +43,17 @@ export default function DriverHome() {
 
     return () => {
       if (responseListener.current) responseListener.current.remove();
+      WebSocketService.removeListener(handleMessage);
     };
   }, []);
 
   const handleMessage = (msg) => {
+    const parsed = JSON.parse(msg);
     console.log("📨 Message from server:", msg);
-    Alert.alert("Notification", msg);
+    Alert.alert(
+      parsed.message,
+      `Total distance : ${parsed.distance} Estimated Fare ${parsed.fare}`
+    );
   };
 
   useLayoutEffect(() => {
@@ -96,9 +97,12 @@ export default function DriverHome() {
         // }}
         onRegionChangeComplete={(newRegion) => {
           WebSocketService.send({
-            action: "track",
-            coordinate: { lat: newRegion.latitude, lng: newRegion.longitude },
-            status: dutyStatus,
+            message: "Driver ping",
+            driverLocation: {
+              lat: newRegion.latitude,
+              lng: newRegion.longitude,
+            },
+            driverStatus: dutyStatus,
           });
         }}
       >
