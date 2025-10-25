@@ -15,7 +15,10 @@ export default function RideSummaryModal({
   setPaymentMethod,
 }) {
   const vehicles = ["Car"];
-  const paymentModes = ["Cash", "UPI", "Card"];
+  const vehicleCategory = {
+    Car: ["Sedan", "Hatchback", "Luxury"],
+  };
+  const paymentModes = ["Cash", "UPI"];
 
   return (
     <Modal

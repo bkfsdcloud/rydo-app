@@ -1,8 +1,9 @@
 import { LocationContext } from "@/app/context/LocationContext";
 import { getAvailable } from "@/scripts/api/driverApi";
 import { handleAutocomplete, handleGetRoute } from "@/scripts/api/geoApi";
+import { createRide } from "@/scripts/api/riderApi";
 import { Ionicons } from "@expo/vector-icons";
-import { useContext, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -39,9 +40,24 @@ export default function MapScreen() {
   const [showModal, setShowModal] = useState(false);
   const [transportMode, setTransportMode] = useState("Car");
   const [paymentMethod, setPaymentMethod] = useState("Cash");
-  const { location } = useContext(LocationContext);
+  const { location, accessible } = useContext(LocationContext);
 
   const [drivers, setDrivers] = useState([]);
+
+  useEffect(() => {
+    async function checkAccess() {
+      try {
+        if (!accessible) {
+          // Alert.alert("Access Restricted", "You are not in the allowed area.");
+          console.log("You are not in the allowed area.");
+          // Optionally navigate away or disable service features
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    checkAccess();
+  });
 
   const getAllDrivers = async () => {
     const response = await getAvailable({
@@ -89,13 +105,21 @@ export default function MapScreen() {
     setOriginCoord(res.data.originCoord);
     setDestCoord(res.data.destCoord);
     setFare(res.data.fare);
-    setDistance(res.data.distanceTxt);
+    setDistance(res.data.distanceKm);
     setTimeout(() => setShowModal(true), 1000);
   };
 
-  const handleBookRide = () => {
+  const handleBookRide = async () => {
     setShowModal(false);
     console.log("Ride Booked with", { transportMode, paymentMethod });
+    await createRide({
+      fareEstimated: fare,
+      pickupLat: originCoord.lat,
+      pickupLng: originCoord.lng,
+      dropLat: destCoord.lat,
+      dropLng: destCoord.lng,
+      distanceKm: distance,
+    });
     // call your backend API here
   };
 

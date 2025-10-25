@@ -1,15 +1,34 @@
 // LocationContext.js
 import * as Location from "expo-location";
+import { getDistance } from "geolib";
 import { createContext, useEffect, useState } from "react";
 
 export const LocationContext = createContext();
 
 export const LocationProvider = ({ children }) => {
+  const allowedArea = {
+    latitude: 11.01602, // center latitude
+    longitude: 76.97031, // center longitude
+    radius: 60000, // in meters
+  };
+
+  const [error, setError] = useState(null);
   const [location, setLocation] = useState({
     latitude: 12.9716,
     longitude: 77.5946,
   });
-  const [error, setError] = useState(null);
+  const [accessible, setAccessible] = useState(false);
+
+  const isUserInsideAllowedArea = () => {
+    const distance = getDistance(
+      {
+        latitude: location.latitude,
+        longitude: location.longitude,
+      },
+      { latitude: allowedArea.latitude, longitude: allowedArea.longitude }
+    );
+    setAccessible(distance <= allowedArea.radius);
+  };
 
   const getCurrentLocation = async () => {
     try {
@@ -31,6 +50,7 @@ export const LocationProvider = ({ children }) => {
 
   useEffect(() => {
     getCurrentLocation();
+    isUserInsideAllowedArea();
 
     // Optional: track location changes
     const watch = Location.watchPositionAsync(
@@ -45,7 +65,7 @@ export const LocationProvider = ({ children }) => {
 
   return (
     <LocationContext.Provider
-      value={{ location, error, refresh: getCurrentLocation }}
+      value={{ location, error, refresh: getCurrentLocation, accessible }}
     >
       {children}
     </LocationContext.Provider>
