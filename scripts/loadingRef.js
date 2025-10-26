@@ -1,7 +1,7 @@
 
 let loadingRef = {
-  loading: () => false,
-  setLoading: () => {},
+  showLoading: () => {},
+  hideLoading: () => {}
 };
 
 export const setLoadingRef = (controller) => {

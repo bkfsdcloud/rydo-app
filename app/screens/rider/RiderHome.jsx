@@ -1,9 +1,16 @@
 import { LocationContext } from "@/app/context/LocationContext";
 import { getAvailable } from "@/scripts/api/driverApi";
 import { handleAutocomplete, handleGetRoute } from "@/scripts/api/geoApi";
-import { createRide } from "@/scripts/api/riderApi";
+import { activeRide, createRide } from "@/scripts/api/riderApi";
 import { Ionicons } from "@expo/vector-icons";
-import { useContext, useEffect, useRef, useState } from "react";
+import { useNavigation } from "@react-navigation/native";
+import {
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -18,6 +25,7 @@ import MapView, { Marker, Polyline } from "react-native-maps";
 import RideSummaryModal from "./RideSummaryModal";
 
 export default function MapScreen() {
+  const navigation = useNavigation();
   const [origin, setOrigin] = useState({ place_id: "", description: "" });
   const [destination, setDestination] = useState({
     place_id: "",
@@ -43,6 +51,7 @@ export default function MapScreen() {
   const { location, accessible } = useContext(LocationContext);
 
   const [drivers, setDrivers] = useState([]);
+  const [ridePending, setRidePending] = useState(false);
 
   useEffect(() => {
     async function checkAccess() {
@@ -58,6 +67,47 @@ export default function MapScreen() {
     }
     checkAccess();
   });
+
+  useLayoutEffect(() => {
+    async function checkActive() {
+      const active = await activeRide();
+      if (active.data?.data) {
+        // getLoadingRef().showLoading("Searching", "Cancel", () => {
+        //   Alert.alert("Alert", "Cancel ride");
+        //   getLoadingRef().hideLoading();
+        // });
+        setRidePending(true);
+        setOriginCoord({
+          lat: active.data?.data?.pickupLat,
+          lng: active.data?.data?.pickupLng,
+        });
+        setDestCoord({
+          lat: active.data?.data?.dropLat,
+          lng: active.data?.data?.dropLng,
+        });
+        setOrigin({ description: active.data?.data?.pickupLocation });
+        setDestination({ description: active.data?.data?.dropLocation });
+      } else {
+        setRidePending(false);
+      }
+    }
+
+    navigation.setOptions({
+      headerRight: () => (
+        <>
+          <Text>Pending</Text>
+          <Ionicons
+            style={{ marginRight: 20 }}
+            onPress={checkActive}
+            color={"green"}
+            name="alert-outline"
+            size={24}
+          ></Ionicons>
+        </>
+      ),
+    });
+    checkActive();
+  }, [navigation]);
 
   const getAllDrivers = async () => {
     const response = await getAvailable({
@@ -96,7 +146,7 @@ export default function MapScreen() {
   });
 
   const handleRoute = async () => {
-    if (!origin.place_id || !destination.place_id) return;
+    if (!origin.place_id || !destination.place_id || ridePending) return;
     const res = await handleGetRoute({
       originPlaceId: origin.place_id,
       destPlaceId: destination.place_id,
@@ -119,6 +169,8 @@ export default function MapScreen() {
       dropLat: destCoord.lat,
       dropLng: destCoord.lng,
       distanceKm: distance,
+      pickupLocation: origin.description,
+      dropLocation: destination.description,
     });
     // call your backend API here
   };

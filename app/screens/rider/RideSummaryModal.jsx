@@ -1,5 +1,6 @@
 // RideSummaryModal.jsx
 import { Ionicons } from "@expo/vector-icons";
+import { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Modal from "react-native-modal";
 
@@ -15,10 +16,12 @@ export default function RideSummaryModal({
   setPaymentMethod,
 }) {
   const vehicles = ["Car"];
-  const vehicleCategory = {
+  const vehicleCategorys = {
     Car: ["Sedan", "Hatchback", "Luxury"],
   };
   const paymentModes = ["Cash", "UPI"];
+
+  const [vehicleCategory, setVehicleCategory] = useState("");
 
   return (
     <Modal
@@ -61,6 +64,30 @@ export default function RideSummaryModal({
                 ]}
               >
                 {mode}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          {vehicleCategorys[transportMode]?.map((category) => (
+            <TouchableOpacity
+              key={category}
+              style={[
+                styles.option,
+                vehicleCategory === category && styles.selectedOption,
+              ]}
+              onPress={() => setVehicleCategory(category)}
+            >
+              <Ionicons
+                name={"car-outline"}
+                size={22}
+                color={vehicleCategory === category ? "#fff" : "#333"}
+              />
+              <Text
+                style={[
+                  styles.optionText,
+                  vehicleCategory === category && styles.optionTextSelected,
+                ]}
+              >
+                {category}
               </Text>
             </TouchableOpacity>
           ))}

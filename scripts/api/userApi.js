@@ -55,7 +55,7 @@ ErrorUtils.setGlobalHandler((error, isFatal) => {
 
 api.interceptors.request.use(
   async (config) => {
-    getLoadingRef().setLoading(true); // show loader
+    getLoadingRef().showLoading();
     const token = await AsyncStorage.getItem('userToken'); // get token
     console.log(token)
     if (token) {
@@ -64,7 +64,7 @@ api.interceptors.request.use(
     return config;
   },
   error => {
-    getLoadingRef().setLoading(false);
+    getLoadingRef().hideLoading(false);
     return Promise.reject(error);
   }
 );
@@ -72,11 +72,11 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   response => {
     console.log(response.data);
-    getLoadingRef().setLoading(false); // hide loader
+    getLoadingRef().hideLoading();
     return response;
   }, // Pass successful responses
   async error => {
-    getLoadingRef().setLoading(false);
+    getLoadingRef().hideLoading();
     
     if (error.response) {
       console.log(error.response.data);
