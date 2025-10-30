@@ -1,114 +1,55 @@
 import { Ionicons } from "@expo/vector-icons";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import React from "react";
-import ProfileStack from "../navigation/ProfileStack";
+import RiderStack from "../navigation/RiderStack";
 import AdminDashboard from "../screens/admin/AdminDashboard";
 import DriverHome from "../screens/driver/DriverHome";
-import RiderHome from "../screens/rider/RiderHome";
-import RideTracking from "../screens/RideTracking";
 
-const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator();
 
-export default function RiderTabs() {
+export default function RiderStacks() {
   return (
-    <Tab.Navigator
-    // tabBar={(props) => <FloatingTabBar {...props} />}
-    // screenOptions={{ headerShown: false }}
-    >
-      <Tab.Screen
-        name="Ride"
-        component={RiderHome}
+    <Stack.Navigator>
+      <Stack.Screen
+        name="RiderStack"
+        component={RiderStack}
         options={{
-          tabBarIcon: ({ focused, color, size }) =>
+          headerShown: false,
+          StackBarIcon: ({ focused, color, size }) =>
             placeIcon("golf-outline", focused, color, size),
         }}
       />
-      <Tab.Screen
-        name="Tracking"
-        component={RideTracking}
-        options={{
-          tabBarIcon: ({ focused, color, size }) =>
-            placeIcon("map-outline", focused, color, size),
-        }}
-      />
-      <Tab.Screen
-        name="ProfileStack"
-        component={ProfileStack}
-        options={{
-          unmountOnBlur: true,
-          title: "Profile",
-          headerShown: false,
-          tabBarIcon: ({ focused, color, size }) =>
-            placeIcon("person-outline", focused, color, size),
-        }}
-      />
-    </Tab.Navigator>
+    </Stack.Navigator>
   );
 }
 
-export function DriverTabs() {
+export function DriverStacks() {
   return (
-    <Tab.Navigator>
-      <Tab.Screen
+    <Stack.Navigator>
+      <Stack.Screen
         name="Driver"
         component={DriverHome}
         options={{
-          tabBarIcon: ({ focused, color, size }) =>
+          StackBarIcon: ({ focused, color, size }) =>
             placeIcon("car-outline", focused, color, size),
         }}
       />
-      <Tab.Screen
-        name="Tracking"
-        component={RideTracking}
-        options={{
-          tabBarIcon: ({ focused, color, size }) =>
-            placeIcon("map-outline", focused, color, size),
-        }}
-      />
-      <Tab.Screen
-        name="Profile"
-        component={ProfileStack}
-        options={{
-          title: "Profile",
-          headerShown: false,
-          tabBarIcon: ({ focused, color, size }) =>
-            placeIcon("person-outline", focused, color, size),
-        }}
-      />
-    </Tab.Navigator>
+    </Stack.Navigator>
   );
 }
 
-export function AdminTabs() {
+export function AdminStacks() {
   return (
-    <Tab.Navigator>
-      <Tab.Screen
+    <Stack.Navigator>
+      <Stack.Screen
         name="Dashboard"
         component={AdminDashboard}
         options={{
-          tabBarIcon: ({ focused, color, size }) =>
+          StackBarIcon: ({ focused, color, size }) =>
             placeIcon("settings-outline", focused, color, size),
         }}
       />
-      <Tab.Screen
-        name="Tracking"
-        component={RideTracking}
-        options={{
-          tabBarIcon: ({ focused, color, size }) =>
-            placeIcon("map-outline", focused, color, size),
-        }}
-      />
-      <Tab.Screen
-        name="Profile"
-        component={ProfileStack}
-        options={{
-          title: "Profile",
-          headerShown: false,
-          tabBarIcon: ({ focused, color, size }) =>
-            placeIcon("person-outline", focused, color, size),
-        }}
-      />
-    </Tab.Navigator>
+    </Stack.Navigator>
   );
 }
 

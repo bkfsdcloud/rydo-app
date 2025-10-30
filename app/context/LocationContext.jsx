@@ -9,7 +9,7 @@ export const LocationProvider = ({ children }) => {
   const allowedArea = {
     latitude: 11.01602, // center latitude
     longitude: 76.97031, // center longitude
-    radius: 60000, // in meters
+    radius: 90000, // in meters
   };
 
   const [error, setError] = useState(null);
@@ -19,15 +19,15 @@ export const LocationProvider = ({ children }) => {
   });
   const [accessible, setAccessible] = useState(false);
 
-  const isUserInsideAllowedArea = () => {
+  const isServiceAvailable = (coords) => {
     const distance = getDistance(
       {
-        latitude: location.latitude,
-        longitude: location.longitude,
+        latitude: coords?.latitude || location.latitude,
+        longitude: coords?.longitude || location.longitude,
       },
       { latitude: allowedArea.latitude, longitude: allowedArea.longitude }
     );
-    setAccessible(distance <= allowedArea.radius);
+    return distance <= allowedArea.radius;
   };
 
   const getCurrentLocation = async () => {
@@ -37,12 +37,11 @@ export const LocationProvider = ({ children }) => {
         setError("Permission to access location denied");
         return;
       }
-
       const pos = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
       setLocation(pos.coords);
-      console.log(location);
+      console.log("GPS updating: ", location);
     } catch (err) {
       setError(err.message);
     }
@@ -50,9 +49,8 @@ export const LocationProvider = ({ children }) => {
 
   useEffect(() => {
     getCurrentLocation();
-    isUserInsideAllowedArea();
+    setAccessible(isServiceAvailable());
 
-    // Optional: track location changes
     const watch = Location.watchPositionAsync(
       { accuracy: Location.Accuracy.High, distanceInterval: 10 },
       (pos) => setLocation(pos.coords)
@@ -65,7 +63,13 @@ export const LocationProvider = ({ children }) => {
 
   return (
     <LocationContext.Provider
-      value={{ location, error, refresh: getCurrentLocation, accessible }}
+      value={{
+        location,
+        error,
+        refresh: getCurrentLocation,
+        accessible,
+        isServiceAvailable,
+      }}
     >
       {children}
     </LocationContext.Provider>

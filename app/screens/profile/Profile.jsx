@@ -1,17 +1,36 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import { useContext } from "react";
-import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import AuthContext from "../../context/AuthContext";
 
-export default function Profile({ navigation }) {
+export default function Profile() {
   const { user, logout } = useContext(AuthContext);
+  const navigation = useNavigation();
 
   const menuItems = [
-    { id: "1", title: "Profile Details", icon: "person-outline", route: "ProfileDetails" },
+    {
+      id: "1",
+      title: "Profile Details",
+      icon: "person-outline",
+      route: "ProfileDetails",
+    },
     { id: "2", title: "My Rides", icon: "car-outline", route: "RideHistory" },
     { id: "3", title: "Payments", icon: "card-outline", route: "Payments" },
-    { id: "4", title: "Notifications", icon: "notifications-outline", route: "Notifications" },
-    { id: "5", title: "Favorites", icon: "heart-outline", route: "Favorites" }
+    {
+      id: "4",
+      title: "Notifications",
+      icon: "notifications-outline",
+      route: "Notifications",
+    },
+    { id: "5", title: "Favorites", icon: "heart-outline", route: "Favorites" },
   ];
 
   const handleItemPress = (route) => {
@@ -41,7 +60,12 @@ export default function Profile({ navigation }) {
           >
             <Ionicons name={item.icon} size={22} color="#333" />
             <Text style={styles.menuText}>{item.title}</Text>
-            <Ionicons name="chevron-forward-outline" size={20} color="#999" style={styles.arrow} />
+            <Ionicons
+              name="chevron-forward-outline"
+              size={20}
+              color="#999"
+              style={styles.arrow}
+            />
           </TouchableOpacity>
         )}
         ItemSeparatorComponent={() => <View style={styles.separator} />}

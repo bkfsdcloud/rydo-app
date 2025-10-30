@@ -1,410 +1,241 @@
 import { LocationContext } from "@/app/context/LocationContext";
-import { getAvailable } from "@/scripts/api/driverApi";
-import { handleAutocomplete, handleGetRoute } from "@/scripts/api/geoApi";
-import { activeRide, createRide } from "@/scripts/api/riderApi";
+import { getAddress } from "@/scripts/api/geoApi";
+import { commonStyles, DESTINATION, ORIGIN } from "@/scripts/constants";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import { useContext, useLayoutEffect, useRef, useState } from "react";
 import {
-  useContext,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
-import {
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import MapView, { Marker, Polyline } from "react-native-maps";
-import RideSummaryModal from "./RideSummaryModal";
+import MapView from "react-native-maps";
+import { useRideStore } from "../../store/useRideStore";
 
 export default function MapScreen() {
   const navigation = useNavigation();
-  const [origin, setOrigin] = useState({ place_id: "", description: "" });
-  const [destination, setDestination] = useState({
-    place_id: "",
-    description: "",
-  });
-  const [originSuggestions, setOriginSuggestions] = useState([]);
-  const [destSuggestions, setDestSuggestions] = useState([]);
-  const [showOriginDropdown, setShowOriginDropdown] = useState(false);
-  const [showDestDropdown, setShowDestDropdown] = useState(false);
-  const [distance, setDistance] = useState(null);
-  const [fare, setFare] = useState(null);
-
-  const [originCoord, setOriginCoord] = useState({});
-  const [destCoord, setDestCoord] = useState({ lat: 0.05, lng: 0.05 });
-  const [polyline, setPolyline] = useState([]);
-
-  const originDebounce = useRef(null);
-  const destDebounce = useRef(null);
-
-  const [showModal, setShowModal] = useState(false);
-  const [transportMode, setTransportMode] = useState("Car");
-  const [paymentMethod, setPaymentMethod] = useState("Cash");
   const { location, accessible } = useContext(LocationContext);
 
-  const [drivers, setDrivers] = useState([]);
-  const [ridePending, setRidePending] = useState(false);
+  const { origin, destination, setOrigin } = useRideStore();
+  const [locationConfirm, setLocationConfirm] = useState(false);
 
-  useEffect(() => {
-    async function checkAccess() {
-      try {
-        if (!accessible) {
-          // Alert.alert("Access Restricted", "You are not in the allowed area.");
-          console.log("You are not in the allowed area.");
-          // Optionally navigate away or disable service features
-        }
-      } catch (error) {
-        console.error(error);
-      }
-    }
-    checkAccess();
-  });
+  const mapRef = useRef(null);
+
+  async function updateMapLocation(newLocation) {
+    const response = await getAddress({
+      lat: newLocation?.latitude || origin.coords.lat || location.latitude,
+      lng: newLocation?.longitude || origin.coords.lng || location.longitude,
+    });
+    setOrigin({ ...response, coords: origin.coords });
+  }
 
   useLayoutEffect(() => {
     async function checkActive() {
-      const active = await activeRide();
-      if (active.data?.data) {
-        // getLoadingRef().showLoading("Searching", "Cancel", () => {
-        //   Alert.alert("Alert", "Cancel ride");
-        //   getLoadingRef().hideLoading();
-        // });
-        setRidePending(true);
-        setOriginCoord({
-          lat: active.data?.data?.pickupLat,
-          lng: active.data?.data?.pickupLng,
-        });
-        setDestCoord({
-          lat: active.data?.data?.dropLat,
-          lng: active.data?.data?.dropLng,
-        });
-        setOrigin({ description: active.data?.data?.pickupLocation });
-        setDestination({ description: active.data?.data?.dropLocation });
-      } else {
-        setRidePending(false);
-      }
+      // const active = //await activeRide();
     }
 
     navigation.setOptions({
       headerRight: () => (
-        <>
-          <Text>Pending</Text>
-          <Ionicons
-            style={{ marginRight: 20 }}
-            onPress={checkActive}
-            color={"green"}
-            name="alert-outline"
-            size={24}
-          ></Ionicons>
-        </>
+        <Ionicons
+          style={{ marginRight: 20 }}
+          onPress={checkActive}
+          color={"green"}
+          name="alert-outline"
+          size={24}
+        ></Ionicons>
       ),
     });
     checkActive();
   }, [navigation]);
 
-  const getAllDrivers = async () => {
-    const response = await getAvailable({
-      radiusKm: 10,
-      coordinate: { lat: location.latitude, lng: location.longitude },
-    });
-    console.log("Driver location refreshed");
-    setDrivers(response.data || []);
-  };
-
-  const handleSelectOrigin = (item) => {
-    setOrigin(item);
-    setShowOriginDropdown(false);
-    setOriginCoord(item.location || originCoord);
-  };
-
-  const handleSelectDestination = (item) => {
-    setDestination(item);
-    setShowDestDropdown(false);
-    setDestCoord(item.location || destCoord);
-  };
-
-  const resetOriginSuggestion = () => {
-    setOriginSuggestions([]);
-    setShowOriginDropdown(false);
-  };
-
-  const resetDestSuggestion = () => {
-    setDestSuggestions([]);
-    setShowDestDropdown(false);
-  };
-
-  const [markerPosition, setMarkerPosition] = useState({
-    latitude: location.latitude,
-    longitude: location.longitude,
-  });
-
-  const handleRoute = async () => {
-    if (!origin.place_id || !destination.place_id || ridePending) return;
-    const res = await handleGetRoute({
-      originPlaceId: origin.place_id,
-      destPlaceId: destination.place_id,
-    });
-    setPolyline(res.data.coordinates);
-    setOriginCoord(res.data.originCoord);
-    setDestCoord(res.data.destCoord);
-    setFare(res.data.fare);
-    setDistance(res.data.distanceKm);
-    setTimeout(() => setShowModal(true), 1000);
-  };
-
-  const handleBookRide = async () => {
-    setShowModal(false);
-    console.log("Ride Booked with", { transportMode, paymentMethod });
-    await createRide({
-      fareEstimated: fare,
-      pickupLat: originCoord.lat,
-      pickupLng: originCoord.lng,
-      dropLat: destCoord.lat,
-      dropLng: destCoord.lng,
-      distanceKm: distance,
-      pickupLocation: origin.description,
-      dropLocation: destination.description,
-    });
-    // call your backend API here
-  };
-
   return (
-    <>
-      <View style={styles.container}>
-        <MapView
-          paddingAdjustmentBehavior="automatic"
-          style={styles.map}
-          showsUserLocation={true}
-          initialRegion={{
+    <View style={styles.container}>
+      <MapView
+        ref={mapRef}
+        paddingAdjustmentBehavior="automatic"
+        style={styles.map}
+        showsUserLocation={true}
+        initialRegion={{
+          latitude: origin.coords.lat || location.latitude,
+          longitude: origin.coords.lng || location.longitude,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        }}
+        onMapReady={() => {
+          updateMapLocation();
+        }}
+        onRegionChangeComplete={async (newRegion) => {
+          setLocationConfirm(false);
+          updateMapLocation(newRegion);
+        }}
+      ></MapView>
+
+      <View style={commonStyles.overlayContainer}>
+        <TouchableOpacity
+          style={commonStyles.overlayIcon}
+          onPress={() => {
+            navigation.toggleDrawer();
+          }}
+        >
+          <Ionicons
+            name="menu-outline"
+            size={20}
+            color={"#000"}
+            style={{ padding: 10 }}
+          ></Ionicons>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={commonStyles.overlayIcon}
+          onPress={() => {
+            navigation.navigate("Notifications");
+          }}
+        >
+          <Ionicons
+            name="notifications-outline"
+            size={20}
+            color={"#000"}
+            style={{ padding: 10 }}
+          ></Ionicons>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.markerFixed}>
+        <Ionicons name="location-sharp" size={40} color="#E53935" />
+      </View>
+
+      <TouchableOpacity
+        style={{
+          backgroundColor: "#fff",
+          top: "70%",
+          left: "88%",
+          width: "35",
+          height: "35",
+          borderRadius: "50%",
+          position: "absolute",
+          boxShadow:
+            "0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19)",
+        }}
+        onPress={() => {
+          mapRef.current?.animateToRegion({
             latitude: location.latitude,
             longitude: location.longitude,
             latitudeDelta: 0.05,
             longitudeDelta: 0.05,
-          }}
-          onRegionChange={(newRegion) => {
-            setMarkerPosition({
-              latitude: newRegion.latitude,
-              longitude: newRegion.longitude,
-            });
-          }}
-        >
-          {location.latitude && (
-            <Marker
-              coordinate={markerPosition}
-              pinColor="green"
-              title="Your location"
-              move
-            />
-          )}
-          {originCoord.lat && (
-            <Marker
-              coordinate={{
-                latitude: originCoord.lat,
-                longitude: originCoord.lng,
+          });
+        }}
+      >
+        <Ionicons
+          name="locate-outline"
+          size={22}
+          color={"#000"}
+          style={{ padding: 7 }}
+        ></Ionicons>
+      </TouchableOpacity>
+      <View style={styles.bottomCard}>
+        {!accessible && (
+          <View>
+            <Text style={styles.title}>Set Pickup Location</Text>
+            <Text style={styles.subtitle}>
+              Move the map to adjust your pickup point
+            </Text>
+            <TextInput
+              editable={false}
+              value={origin.description}
+              onPress={() => {
+                navigation.navigate(
+                  "LocationSearch",
+                  { searchFor: ORIGIN },
+                  { merge: true }
+                );
               }}
-              title="Origin"
+              placeholder="Select Pick Up Location"
+              placeholderTextColor={"grey"}
+              style={styles.input}
             />
-          )}
-          {destCoord.lat && (
-            <Marker
-              coordinate={{ latitude: destCoord.lat, longitude: destCoord.lng }}
-              title="Destination"
-            />
-          )}
-          {drivers?.map((driver, idx) => (
-            <Marker
-              key={idx}
-              coordinate={{
-                latitude: driver.coordinate.lat,
-                longitude: driver.coordinate.lng,
-              }}
-              title={driver.driverId}
-            />
-          ))}
-          {polyline.length > 0 && (
-            <Polyline
-              coordinates={polyline}
-              strokeWidth={5}
-              strokeColor="blue"
-            />
-          )}
-          <Polyline
-            coordinates={[location, markerPosition]}
-            strokeWidth={2}
-            strokeColor="green"
-            lineDashPattern={[5, 10]}
-          />
-        </MapView>
 
-        <RideSummaryModal
-          visible={showModal}
-          onClose={() => setShowModal(false)}
-          onConfirm={handleBookRide}
-          distance={distance}
-          fare={fare}
-          transportMode={transportMode}
-          setTransportMode={setTransportMode}
-          paymentMethod={paymentMethod}
-          setPaymentMethod={setPaymentMethod}
-        />
-
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={StyleSheet.absoluteFill}
-          pointerEvents="box-none"
-        >
-          <View style={styles.overlayContainer}>
-            <View style={styles.inputContainer}>
+            {locationConfirm ? (
               <TextInput
-                value={origin.description}
-                onChangeText={(text) => {
-                  setOrigin({ description: text });
-                  if (originDebounce.current)
-                    clearTimeout(originDebounce.current);
-                  originDebounce.current = setTimeout(async () => {
-                    if (text.length < 2) return setOriginSuggestions([]);
-                    try {
-                      const res = await handleAutocomplete({
-                        input: text,
-                        // sessionToken: "123",
-                      });
-                      setOriginSuggestions(res || []);
-                      setShowOriginDropdown(true);
-                    } catch {
-                      setOriginSuggestions([]);
-                      setShowOriginDropdown(false);
-                    }
-                  }, 1000); // 500ms debounce
-                }}
-                placeholder="Enter Origin"
-                style={styles.input}
-              />
-              {origin.description.length > 0 && (
-                <TouchableOpacity
-                  onPress={() => [
-                    setOrigin({ place_id: "", description: "" }),
-                    resetOriginSuggestion(),
-                  ]}
-                  style={styles.clearButton}
-                >
-                  <Ionicons name="close-circle" size={20} color="#666" />
-                </TouchableOpacity>
-              )}
-              {showOriginDropdown && (
-                <FlatList
-                  data={originSuggestions}
-                  keyExtractor={(item) => item.place_id}
-                  style={styles.dropdown}
-                  keyboardShouldPersistTaps="handled"
-                  renderItem={({ item }) => (
-                    <TouchableOpacity
-                      onPress={() => handleSelectOrigin(item)}
-                      style={styles.item}
-                    >
-                      <Text>{item.description}</Text>
-                    </TouchableOpacity>
-                  )}
-                />
-              )}
-            </View>
-
-            <View style={styles.inputContainer}>
-              <TextInput
+                editable={false}
                 value={destination.description}
-                onChangeText={(text) => {
-                  setDestination({ description: text });
-                  if (destDebounce.current) clearTimeout(destDebounce.current);
-                  destDebounce.current = setTimeout(async () => {
-                    if (text.length < 2) return setDestSuggestions([]);
-                    try {
-                      const res = await handleAutocomplete({
-                        input: text,
-                        sessionToken: "123",
-                      });
-                      setDestSuggestions(res || []);
-                      setShowDestDropdown(true);
-                    } catch {
-                      setDestSuggestions([]);
-                      setShowDestDropdown(false);
-                    }
-                  }, 1000);
+                onPress={() => {
+                  navigation.navigate(
+                    "LocationSearch",
+                    {
+                      searchFor: DESTINATION,
+                      title: "Choose Drop Location",
+                    },
+                    { merge: true }
+                  );
                 }}
-                placeholder="Enter Destination"
+                placeholder="Select Drop Location"
+                placeholderTextColor={"grey"}
                 style={styles.input}
               />
-              {destination.description.length > 0 && (
+            ) : (
+              <TouchableOpacity
+                style={styles.button}
+                onPress={() => {
+                  setLocationConfirm(true);
+                }}
+              >
+                <Text style={styles.buttonText}>Confirm Location</Text>
+              </TouchableOpacity>
+            )}
+            {locationConfirm &&
+              destination.description &&
+              origin.description && (
                 <TouchableOpacity
-                  onPress={() => [
-                    setDestination({ place_id: "", description: "" }),
-                    resetDestSuggestion(),
-                  ]}
-                  style={styles.clearButton}
+                  style={{
+                    alignSelf: "center",
+                    backgroundColor: "#007AFF",
+                    padding: 15,
+                    borderRadius: 10,
+                    marginTop: 10,
+                  }}
+                  onPress={() => {
+                    navigation.navigate("RideBooking");
+                  }}
                 >
-                  <Ionicons name="close-circle" size={20} color="#666" />
+                  <Text style={{ color: "#fff", fontWeight: "bold" }}>
+                    Book Ride
+                  </Text>
                 </TouchableOpacity>
               )}
-              {showDestDropdown && (
-                <FlatList
-                  data={destSuggestions}
-                  keyExtractor={(item) => item.place_id}
-                  style={styles.dropdown}
-                  keyboardShouldPersistTaps="handled"
-                  renderItem={({ item }) => (
-                    <TouchableOpacity
-                      onPress={() => handleSelectDestination(item)}
-                      style={styles.item}
-                    >
-                      <Text>{item.description}</Text>
-                    </TouchableOpacity>
-                  )}
-                />
-              )}
-            </View>
-            <View
+          </View>
+        )}
+        {accessible && (
+          <View>
+            <TextInput
+              editable={false}
+              value={origin.description}
+              placeholder="Select Pick Up Location"
+              placeholderTextColor={"grey"}
+              style={styles.input}
+            />
+            <Text
               style={{
-                flex: 1,
-                flexDirection: "row",
-                justifyContent: "space-around",
+                fontSize: 14,
+                fontWeight: "600",
+                padding: 10,
+                textAlign: "center",
               }}
             >
-              <TouchableOpacity
-                style={{
-                  alignSelf: "center",
-                  backgroundColor: "#007AFF",
-                  padding: 15,
-                  borderRadius: 10,
-                }}
-                onPress={() => handleRoute()}
-              >
-                <Text style={{ color: "#fff", fontWeight: "bold" }}>
-                  Search Ride
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={{
-                  alignSelf: "center",
-                  backgroundColor: "#007AFF",
-                  padding: 15,
-                  borderRadius: 10,
-                }}
-                onPress={() => getAllDrivers()}
-              >
-                <Text style={{ color: "#fff", fontWeight: "bold" }}>
-                  Check Drivers
-                </Text>
-              </TouchableOpacity>
-            </View>
+              No Service available in this Area
+            </Text>
+            <TouchableOpacity
+              style={styles.phoneBookingButton}
+              onPress={() => {
+                navigation.navigate("PhoneBooking");
+              }}
+            >
+              <Text style={styles.buttonText}>Phone Booking</Text>
+            </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
+        )}
       </View>
-    </>
+    </View>
   );
 }
 
@@ -425,6 +256,7 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
     padding: 10,
     borderRadius: 5,
+    marginTop: 5,
     backgroundColor: "#fff",
   },
   dropdown: {
@@ -443,5 +275,57 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 10,
     top: 12,
+  },
+  bottomCard: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    paddingVertical: 20,
+    paddingHorizontal: 15,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: -2 },
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  subtitle: {
+    color: "#777",
+    marginTop: 4,
+  },
+  button: {
+    backgroundColor: "#007BFF",
+    margin: 10,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  phoneBookingButton: {
+    backgroundColor: "#f0140cff",
+    marginTop: 15,
+    opacity: 0.3,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 16,
+  },
+  markerFixed: {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    marginLeft: -20, // half icon width
+    marginTop: -40, // half icon height
+    zIndex: 10,
   },
 });

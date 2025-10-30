@@ -1,4 +1,4 @@
-import React, { useContext, useRef, useState } from "react";
+import React, { useContext, useState } from "react";
 import {
   Alert,
   StyleSheet,
@@ -15,7 +15,6 @@ export default function LoginScreen({ navigation }) {
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [generateOtp, setGenerateOtp] = useState(false);
-  const otpRef = useRef(null);
 
   const { saveToken } = useContext(AuthContext);
 
@@ -39,8 +38,6 @@ export default function LoginScreen({ navigation }) {
         text2: response.data.message,
         position: "top",
       });
-      otpRef?.current?.focus();
-      // Alert.alert('Success', response.data.message);
     } catch (error) {
       console.log(error);
     }
@@ -60,7 +57,6 @@ export default function LoginScreen({ navigation }) {
         text2: response.data.message,
         position: "top",
       });
-      // Alert.alert('Success', response.data.message);
     } catch (error) {
       console.log(error);
     }
@@ -69,10 +65,10 @@ export default function LoginScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <TextInput
-        autoFocus
         placeholder="Phone"
         keyboardType="numeric"
-        // maxLength="10"
+        clearButtonMode="while-editing"
+        clearTextOnFocus={true}
         value={phone}
         placeholderTextColor="#888"
         onChangeText={setPhone}
@@ -80,9 +76,9 @@ export default function LoginScreen({ navigation }) {
       />
       {generateOtp && (
         <TextInput
-          ref={otpRef}
           placeholder="OTP"
-          // maxLength="6"
+          clearButtonMode="while-editing"
+          clearTextOnFocus={true}
           keyboardType="numeric"
           placeholderTextColor="#888"
           value={otp}

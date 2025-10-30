@@ -1,13 +1,6 @@
 // components/LoadingModal.js
 import { useContext } from "react";
-import {
-  ActivityIndicator,
-  Modal,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, Modal, StyleSheet, View } from "react-native";
 import LoadingContext from "../context/LoadingContext";
 
 export default function LoadingModal() {
@@ -18,12 +11,6 @@ export default function LoadingModal() {
       <View style={styles.container}>
         <View style={styles.loaderBox}>
           <ActivityIndicator size="large" color="#fff" />
-          {message ? <Text style={styles.message}>{message}</Text> : null}
-          {callback && (
-            <TouchableOpacity style={styles.cancelButton} onPress={callback}>
-              <Text style={styles.cancelText}>{button}</Text>
-            </TouchableOpacity>
-          )}
         </View>
       </View>
     </Modal>

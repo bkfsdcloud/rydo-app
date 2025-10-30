@@ -48,12 +48,12 @@ export default function DriverHome() {
   }, []);
 
   const handleMessage = (msg) => {
-    const parsed = JSON.parse(msg);
     console.log("📨 Message from server:", msg);
-    Alert.alert(
-      parsed.message,
-      `Total distance : ${parsed.distance} Estimated Fare ${parsed.fare}`
-    );
+    // const parsed = JSON.parse(msg);
+    // Alert.alert(
+    //   parsed.message,
+    //   `Total distance : ${parsed.distance} Estimated Fare ${parsed.fare}`
+    // );
   };
 
   useLayoutEffect(() => {
@@ -89,14 +89,9 @@ export default function DriverHome() {
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
         }}
-        // region={{
-        //   latitude: originCoord.lat || location.latitude,
-        //   longitude: originCoord.lng || location.longitude,
-        //   latitudeDelta: destCoord.lat || 0.05,
-        //   longitudeDelta: destCoord.lng || 0.05,
-        // }}
         onRegionChangeComplete={(newRegion) => {
           WebSocketService.send({
+            event: "onLocationUpdate",
             message: "Driver ping",
             driverLocation: {
               lat: newRegion.latitude,
@@ -122,7 +117,12 @@ export default function DriverHome() {
           />
         )}
         {polyline.length > 0 && (
-          <Polyline coordinates={polyline} strokeWidth={5} strokeColor="blue" />
+          <Polyline
+            coordinates={polyline}
+            strokeWidth={5}
+            strokeColor="blue"
+            geodesic={true}
+          />
         )}
       </MapView>
     </>
