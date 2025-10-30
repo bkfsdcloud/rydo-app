@@ -21,12 +21,12 @@ export const signUp = async (user) => {
 };
 
 export const genOtp = async (phone) => {
-  const response = await api.post('/api/auth/send-otp', {phone});
+  const response = await api.post('https://ohtryxvm9b.execute-api.ap-south-1.amazonaws.com/dev/api/v1/rydo/users/generate-otp', {phone});
   return response;
 };
 
 export const verifyOtp = async (phone, otp) => {
-  const response = await api.post('/api/auth/verify-otp', {phone, otp});
+  const response = await api.post('https://ohtryxvm9b.execute-api.ap-south-1.amazonaws.com/dev/api/v1/rydo/users/verify-otp', {phone, otp});
   return response;
 };
 

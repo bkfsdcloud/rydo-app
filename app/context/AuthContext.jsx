@@ -1,6 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useEffect, useState } from "react";
-import { loadUserProfile } from "../../scripts/api/userApi";
 import WebSocketService from "../../scripts/WebSocketService";
 import { useRideStore } from "../store/useRideStore";
 
@@ -29,12 +28,12 @@ export const AuthProvider = ({ children }) => {
     loadToken();
   }, []);
 
-  const saveToken = async (newToken) => {
-    await AsyncStorage.setItem("userToken", newToken);
-    setToken(newToken);
-    const userRes = await loadUserProfile();
+  const saveToken = async (response) => {
+    await AsyncStorage.setItem("userToken", response.token);
+    setToken(response.token);
+    // const userRes = await loadUserProfile();
     // console.log(userRes.data)
-    setUser(userRes.data);
+    setUser(response);
   };
 
   const logout = async () => {

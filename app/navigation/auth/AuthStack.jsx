@@ -10,7 +10,7 @@ export default function AuthStack() {
     <Stack.Navigator>
       <Stack.Screen
         name="Login"
-        options={{ title: "Taxi Taxi" }}
+        options={{ headerShown: false }}
         component={LoginScreen}
       />
       <Stack.Screen name="Signup" component={SignUp} />

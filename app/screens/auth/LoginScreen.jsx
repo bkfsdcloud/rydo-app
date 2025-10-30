@@ -18,6 +18,9 @@ export default function LoginScreen({ navigation }) {
 
   const { saveToken } = useContext(AuthContext);
 
+  const isDisabled = phone.trim().length !== 10;
+  const isValidOtp = otp.trim().length !== 6;
+
   const resendOtp = async () => {
     setGenerateOtp(false);
     setOtp("");
@@ -50,7 +53,7 @@ export default function LoginScreen({ navigation }) {
     }
     try {
       const response = await verifyOtp(phone, otp);
-      await saveToken(response.data.data);
+      await saveToken(response.data);
       Toast.show({
         type: "success",
         text1: "Success",
@@ -64,13 +67,28 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <View
+        style={{
+          flex: 1,
+          position: "absolute",
+          top: 100,
+          alignItems: "center",
+        }}
+      >
+        <Text style={{ fontSize: 30 }}>Welcome To</Text>
+        <Text style={{ fontSize: 30, fontWeight: "700" }}>Taxi Taxi!</Text>
+      </View>
+      <Text style={{ fontSize: 18, marginBottom: 10, fontWeight: "500" }}>
+        Login with your Phone Number
+      </Text>
       <TextInput
-        placeholder="Phone"
-        keyboardType="numeric"
+        placeholder="Ex. 9841232587"
+        keyboardType="number-pad"
+        returnKeyType="done"
         clearButtonMode="while-editing"
-        clearTextOnFocus={true}
         value={phone}
         placeholderTextColor="#888"
+        maxLength={10}
         onChangeText={setPhone}
         style={styles.input}
       />
@@ -78,10 +96,11 @@ export default function LoginScreen({ navigation }) {
         <TextInput
           placeholder="OTP"
           clearButtonMode="while-editing"
-          clearTextOnFocus={true}
-          keyboardType="numeric"
+          returnKeyType="done"
+          keyboardType="number-pad"
           placeholderTextColor="#888"
           value={otp}
+          maxLength={6}
           onChangeText={setOtp}
           style={styles.input}
         />
@@ -91,31 +110,46 @@ export default function LoginScreen({ navigation }) {
           <>
             <TouchableOpacity
               onPress={() => verifyOtpI()}
-              style={[styles.roleBtn]}
+              disabled={otp?.length !== 6}
+              style={[
+                styles.roleBtn,
+                isValidOtp ? { backgroundColor: "grey" } : {},
+              ]}
             >
-              <Text>Verify</Text>
+              <Text style={styles.textWhite}>Verify</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => resendOtp()}
               style={[styles.roleBtn]}
             >
-              <Text>Resend OTP</Text>
+              <Text style={styles.textWhite}>Resend OTP</Text>
             </TouchableOpacity>
           </>
         ) : (
           <TouchableOpacity
+            disabled={phone?.length !== 10}
             onPress={() => triggerOtp()}
-            style={[styles.roleBtn]}
+            style={[
+              styles.roleBtn,
+              isDisabled ? { backgroundColor: "grey" } : {},
+            ]}
           >
-            <Text>Generate OTP</Text>
+            <Text style={[styles.textWhite]}>Send OTP</Text>
           </TouchableOpacity>
         )}
-        <TouchableOpacity
+        {/* <TouchableOpacity
           onPress={() => navigation.navigate("Signup")}
           style={[styles.roleBtn]}
         >
           <Text>Signup</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
+      </View>
+      <View style={{ position: "absolute", bottom: 30 }}>
+        <Text style={{ fontSize: 12, fontWeight: "600" }}>
+          By Continuing, You Agree to Taxi Taxi's{" "}
+          <Text style={{ color: "red" }}>Terms & Conditions</Text> And{" "}
+          <Text style={{ color: "red" }}>Privacy Policy</Text>
+        </Text>
       </View>
     </View>
   );
@@ -135,6 +169,7 @@ const styles = StyleSheet.create({
     padding: 8,
     marginBottom: 12,
     borderRadius: 6,
+    textAlign: "center",
   },
   roleRow: { flexDirection: "row", marginBottom: 12 },
   roleBtn: {
@@ -142,7 +177,13 @@ const styles = StyleSheet.create({
     marginHorizontal: 6,
     borderWidth: 1,
     borderRadius: 6,
+    backgroundColor: "#e72525ff",
+    borderColor: "#fff",
   },
   roleActive: { backgroundColor: "#ddd" },
   hint: { marginTop: 12, color: "#666" },
+  textWhite: {
+    color: "#fff",
+    fontWeight: "500",
+  },
 });
