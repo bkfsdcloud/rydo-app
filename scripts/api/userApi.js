@@ -16,7 +16,7 @@ export const loginUser = async (phone) => {
 
 export const signUp = async (user) => {
   console.log(user)
-  const response = await api.post('/api/auth/signup', user);
+  const response = await api.post('https://ohtryxvm9b.execute-api.ap-south-1.amazonaws.com/dev/api/v1/rydo/users/signup', user);
   return response;
 };
 

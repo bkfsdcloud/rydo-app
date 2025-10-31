@@ -1,3 +1,4 @@
+import { useNavigation } from "@react-navigation/native";
 import React, { useContext, useState } from "react";
 import {
   Alert,
@@ -11,7 +12,8 @@ import Toast from "react-native-toast-message";
 import { genOtp, verifyOtp } from "../../../scripts/api/userApi";
 import AuthContext from "../../context/AuthContext";
 
-export default function LoginScreen({ navigation }) {
+export default function LoginScreen() {
+  const navigation = useNavigation();
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [generateOtp, setGenerateOtp] = useState(false);
@@ -53,7 +55,11 @@ export default function LoginScreen({ navigation }) {
     }
     try {
       const response = await verifyOtp(phone, otp);
-      await saveToken(response.data);
+      if (response.data?.token) {
+        await saveToken(response.data);
+      } else if (response.data.message === "New user") {
+        navigation.navigate("SignUp", { phone });
+      }
       Toast.show({
         type: "success",
         text1: "Success",

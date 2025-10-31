@@ -23,5 +23,25 @@ export const commonStyles = StyleSheet.create({
     backgroundColor: "#fff",
             margin: 10,
             borderRadius: "50%",
-  }
+  },
+  bottomCard: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    paddingVertical: 20,
+    paddingHorizontal: 15,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: -2 },
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  textWhite: {
+    color: "#fff",
+    fontWeight: "500",
+  },
 });

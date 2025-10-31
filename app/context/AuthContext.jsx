@@ -3,17 +3,10 @@ import React, { createContext, useEffect, useState } from "react";
 import WebSocketService from "../../scripts/WebSocketService";
 import { useRideStore } from "../store/useRideStore";
 
-/**
- * Mock auth context
- * - login({role, name}) sets a simple user object
- * - roles: 'rider' | 'driver'
- */
-
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
-  const [loading, setLoading] = useState(true); // <-- new loading state
   const [user, setUser] = useState("");
   const { resetRide } = useRideStore();
 
@@ -23,7 +16,6 @@ export const AuthProvider = ({ children }) => {
       if (storedToken) {
         setToken(storedToken);
       }
-      setLoading(false); // done checking token
     };
     loadToken();
   }, []);
@@ -31,8 +23,6 @@ export const AuthProvider = ({ children }) => {
   const saveToken = async (response) => {
     await AsyncStorage.setItem("userToken", response.token);
     setToken(response.token);
-    // const userRes = await loadUserProfile();
-    // console.log(userRes.data)
     setUser(response);
   };
 

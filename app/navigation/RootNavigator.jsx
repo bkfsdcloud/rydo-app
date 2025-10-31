@@ -41,7 +41,7 @@ export default function RootNavigator() {
         ),
       })}
     >
-      {user ? (
+      {user?.token ? (
         <>
           <Stack.Screen
             name="MainDrawer"
