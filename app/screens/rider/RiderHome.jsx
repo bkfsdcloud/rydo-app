@@ -3,7 +3,7 @@ import { getAddress } from "@/scripts/api/geoApi";
 import { commonStyles, DESTINATION, ORIGIN } from "@/scripts/constants";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { useContext, useLayoutEffect, useRef, useState } from "react";
+import { useContext, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -19,36 +19,22 @@ export default function MapScreen() {
   const { location, accessible } = useContext(LocationContext);
 
   const { origin, destination, setOrigin } = useRideStore();
-  const [locationConfirm, setLocationConfirm] = useState(false);
+  // const [locationConfirm, setLocationConfirm] = useState(false);
 
   const mapRef = useRef(null);
 
   async function updateMapLocation(newLocation) {
-    const response = await getAddress({
-      lat: newLocation?.latitude || origin.coords.lat || location.latitude,
-      lng: newLocation?.longitude || origin.coords.lng || location.longitude,
-    });
-    setOrigin({ ...response, coords: origin.coords });
-  }
-
-  useLayoutEffect(() => {
-    async function checkActive() {
-      // const active = //await activeRide();
+    if (newLocation || isNaN(origin.coords.lat) || origin.coords.lat === "") {
+      const coords = {
+        lat: newLocation?.latitude || origin.coords.lat || location.latitude,
+        lng: newLocation?.longitude || origin.coords.lng || location.longitude,
+      };
+      const response = await getAddress(coords);
+      setOrigin({ ...response, coords });
+    } else {
+      setOrigin({ coords: origin.coords });
     }
-
-    navigation.setOptions({
-      headerRight: () => (
-        <Ionicons
-          style={{ marginRight: 20 }}
-          onPress={checkActive}
-          color={"green"}
-          name="alert-outline"
-          size={24}
-        ></Ionicons>
-      ),
-    });
-    checkActive();
-  }, [navigation]);
+  }
 
   return (
     <View style={styles.container}>
@@ -67,7 +53,7 @@ export default function MapScreen() {
           updateMapLocation();
         }}
         onRegionChangeComplete={async (newRegion) => {
-          setLocationConfirm(false);
+          // setLocationConfirm(false);
           updateMapLocation(newRegion);
         }}
       ></MapView>
@@ -140,9 +126,10 @@ export default function MapScreen() {
             <Text style={styles.subtitle}>
               Move the map to adjust your pickup point
             </Text>
+            <Text>{origin?.coords.lat}</Text>
             <TextInput
               editable={false}
-              value={origin.description}
+              value={`${origin.description} ${origin.secondaryText}`}
               onPress={() => {
                 navigation.navigate(
                   "LocationSearch",
@@ -154,55 +141,43 @@ export default function MapScreen() {
               placeholderTextColor={"grey"}
               style={styles.input}
             />
+            <Text>{destination?.coords.lat}</Text>
+            <TextInput
+              editable={false}
+              value={`${destination.description} ${destination.secondaryText}`}
+              onPress={() => {
+                navigation.navigate(
+                  "LocationSearch",
+                  {
+                    searchFor: DESTINATION,
+                    title: "Choose Drop Location",
+                  },
+                  { merge: true }
+                );
+              }}
+              placeholder="Select Drop Location"
+              placeholderTextColor={"grey"}
+              style={styles.input}
+            />
 
-            {locationConfirm ? (
-              <TextInput
-                editable={false}
-                value={destination.description}
-                onPress={() => {
-                  navigation.navigate(
-                    "LocationSearch",
-                    {
-                      searchFor: DESTINATION,
-                      title: "Choose Drop Location",
-                    },
-                    { merge: true }
-                  );
-                }}
-                placeholder="Select Drop Location"
-                placeholderTextColor={"grey"}
-                style={styles.input}
-              />
-            ) : (
+            {destination.description && origin.description && (
               <TouchableOpacity
-                style={styles.button}
+                style={{
+                  alignSelf: "center",
+                  backgroundColor: "#007AFF",
+                  padding: 15,
+                  borderRadius: 10,
+                  marginTop: 10,
+                }}
                 onPress={() => {
-                  setLocationConfirm(true);
+                  navigation.navigate("RideBooking");
                 }}
               >
-                <Text style={styles.buttonText}>Confirm Location</Text>
+                <Text style={{ color: "#fff", fontWeight: "bold" }}>
+                  Book Ride
+                </Text>
               </TouchableOpacity>
             )}
-            {locationConfirm &&
-              destination.description &&
-              origin.description && (
-                <TouchableOpacity
-                  style={{
-                    alignSelf: "center",
-                    backgroundColor: "#007AFF",
-                    padding: 15,
-                    borderRadius: 10,
-                    marginTop: 10,
-                  }}
-                  onPress={() => {
-                    navigation.navigate("RideBooking");
-                  }}
-                >
-                  <Text style={{ color: "#fff", fontWeight: "bold" }}>
-                    Book Ride
-                  </Text>
-                </TouchableOpacity>
-              )}
           </View>
         )}
         {accessible && (

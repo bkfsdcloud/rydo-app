@@ -4,20 +4,16 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useRideStore } from "../../store/useRideStore";
 
 export default function RideSummaryModal({ visible, onClose, onConfirm }) {
-  // const transportModes = ["Car"];
-  const categories = {
-    Car: ["Standard", "Premium", "Luxury", "Executive"],
-  };
   const paymentModes = ["Cash", "UPI"];
 
   const {
-    transportMode,
     paymentMethod,
     setPaymentMethod,
     category,
     setCategory,
-    fare,
+    setFare,
     distance,
+    fares,
   } = useRideStore();
 
   return (
@@ -35,7 +31,6 @@ export default function RideSummaryModal({ visible, onClose, onConfirm }) {
       {/* Ride Info */}
       <Text style={styles.heading}>Trip Summary</Text>
       <Text style={styles.subText}>Distance: {distance}</Text>
-      <Text style={styles.subText}>Fare: ₹{fare}</Text>
 
       {/* Transport Options */}
       {/* <Text style={styles.label}>Select Transport</Text>
@@ -67,11 +62,11 @@ export default function RideSummaryModal({ visible, onClose, onConfirm }) {
       </View> */}
       {/* Vehicle Category */}
       <View style={styles.row}>
-        {categories[transportMode]?.map((item) => (
+        {Object.entries(fares || {}).map(([item, value]) => (
           <TouchableOpacity
             key={item}
             style={[styles.option, category === item && styles.selectedOption]}
-            onPress={() => setCategory(item)}
+            onPress={() => [setCategory(item), setFare(value)]}
           >
             <Ionicons
               name={"car-outline"}
@@ -85,6 +80,14 @@ export default function RideSummaryModal({ visible, onClose, onConfirm }) {
               ]}
             >
               {item}
+            </Text>
+            <Text
+              style={[
+                styles.fare,
+                category === item && styles.optionTextSelected,
+              ]}
+            >
+              ₹{value}
             </Text>
           </TouchableOpacity>
         ))}
@@ -151,6 +154,7 @@ const styles = StyleSheet.create({
   },
   heading: { fontSize: 18, fontWeight: "bold", marginBottom: 8 },
   subText: { fontSize: 15, color: "#555", marginBottom: 5 },
+  fare: { fontSize: 12, color: "#555", marginBottom: 5 },
   label: { marginTop: 15, fontSize: 16, fontWeight: "500", marginBottom: 8 },
   row: {
     flexDirection: "row",
@@ -159,14 +163,19 @@ const styles = StyleSheet.create({
   },
   option: {
     flex: 1,
-    padding: 5,
+    padding: 3,
     backgroundColor: "#f2f2f2",
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },
   selectedOption: { backgroundColor: "#007AFF" },
-  optionText: { marginTop: 5, fontSize: 12, color: "#333" },
+  optionText: {
+    marginTop: 5,
+    fontSize: 12,
+    color: "#333",
+    textTransform: "capitalize",
+  },
   optionTextSelected: { color: "#fff" },
   button: {
     marginTop: 10,

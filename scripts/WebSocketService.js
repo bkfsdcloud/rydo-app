@@ -14,7 +14,7 @@ class WebSocketService {
     return WebSocketService.instance;
   }
 
-  connect = (token) => {
+  connect = (token, defMessage) => {
     if (this.socket) return;
 
     this.socket = new WebSocket(SOCKET_URL, undefined, {
@@ -25,6 +25,7 @@ class WebSocketService {
 
     this.socket.onopen = () => {
       console.log('✅ WebSocket Connected');
+      this.socket.send(JSON.stringify(defMessage));
     };
 
     this.socket.onmessage = (event) => {

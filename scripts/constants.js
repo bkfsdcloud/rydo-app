@@ -44,4 +44,19 @@ export const commonStyles = StyleSheet.create({
     color: "#fff",
     fontWeight: "500",
   },
+  dropdownRecent: {
+    position: "absolute",
+    top: 30,
+    width: "100%",
+    maxHeight: 150,
+    borderColor: "#ccc",
+    borderRadius: 5,
+    zIndex: 900,
+  },
+  dropdownPanelRecent: {
+    flex: 1,
+    flexDirection: "row",
+    width: "90%",
+    padding: 2,
+  }
 });

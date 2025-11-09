@@ -91,7 +91,7 @@ export default function LoginScreen() {
         placeholder="Ex. 9841232587"
         keyboardType="number-pad"
         returnKeyType="done"
-        clearButtonMode="while-editing"
+        clearButtonMode="always"
         value={phone}
         placeholderTextColor="#888"
         maxLength={10}
@@ -101,7 +101,7 @@ export default function LoginScreen() {
       {generateOtp && (
         <TextInput
           placeholder="OTP"
-          clearButtonMode="while-editing"
+          clearButtonMode="always"
           returnKeyType="done"
           keyboardType="number-pad"
           placeholderTextColor="#888"

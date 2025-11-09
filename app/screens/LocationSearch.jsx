@@ -1,7 +1,8 @@
 import { getCoords, handleAutocomplete } from "@/scripts/api/geoApi";
+import { commonStyles } from "@/scripts/constants";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   FlatList,
   StyleSheet,
@@ -10,19 +11,31 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { getRecentSearches, saveSearch } from "../../scripts/searchStorage";
 import { useRideStore } from "../store/useRideStore";
 
 export default function LocationSearch() {
   const navigation = useNavigation();
   const route = useRoute();
 
-  const { origin, setLocation } = useRideStore();
+  const { setLocation } = useRideStore();
 
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestionDropdown, setShowSuggestionDropdown] = useState(false);
 
   const locationDebounce = useRef(null);
   const [searchFor] = useState(route?.params?.searchFor || null);
+
+  const [recent, setRecent] = useState([]);
+
+  useEffect(() => {
+    loadSearches();
+  }, []);
+
+  const loadSearches = async () => {
+    const data = await getRecentSearches();
+    setRecent(data);
+  };
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -41,7 +54,7 @@ export default function LocationSearch() {
           setShowSuggestionDropdown(false);
           if (locationDebounce.current) clearTimeout(locationDebounce.current);
           locationDebounce.current = setTimeout(async () => {
-            if (text.length < 2) return setSuggestions([]);
+            if (!text) return;
             try {
               const res = await handleAutocomplete({
                 input: text,
@@ -76,6 +89,15 @@ export default function LocationSearch() {
                 onPress={async () => {
                   setShowSuggestionDropdown(false);
                   const coords = await getCoords({ placeId: item.place_id });
+                  if (item?.description) {
+                    await saveSearch({
+                      description: item?.description.trim(),
+                      place_id: item?.place_id.trim(),
+                      secondaryText: item?.secondaryText.trim(),
+                    });
+                    loadSearches();
+                  }
+                  console.log("item: ", item);
                   setLocation(searchFor, { ...item, coords });
                   navigation.navigate({
                     name: "RiderHome",
@@ -106,7 +128,42 @@ export default function LocationSearch() {
       )}
       <View>
         <Text style={styles.title}>Recently Used</Text>
-        <Text style={styles.subtitle}></Text>
+        <FlatList
+          data={recent}
+          keyExtractor={(item) => item.place_id}
+          style={commonStyles.dropdownRecent}
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item }) => (
+            <View style={commonStyles.dropdownPanelRecent}>
+              <Ionicons
+                name="location"
+                size={20}
+                style={styles.dropdownIcon}
+                color="#666"
+              />
+              <TouchableOpacity
+                onPress={async () => {
+                  const coords = await getCoords({ placeId: item.place_id });
+
+                  setLocation(searchFor, { ...item, coords });
+                  navigation.navigate({
+                    name: "RiderHome",
+                  });
+                }}
+                style={styles.item}
+              >
+                <Text numberOfLines={1} style={styles.subtitle}>
+                  {item.description}
+                </Text>
+                <Text
+                  ellipsizeMode="tail"
+                  numberOfLines={1}
+                  style={{ fontSize: 12 }}
+                ></Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        />
       </View>
       <View style={styles.bottomCard}>
         <Text style={styles.title}>Not able to find the location</Text>

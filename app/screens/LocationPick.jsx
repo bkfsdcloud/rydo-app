@@ -3,10 +3,10 @@ import {
   getCoords,
   handleAutocomplete,
 } from "@/scripts/api/geoApi";
-import { ORIGIN } from "@/scripts/constants";
+import { commonStyles, ORIGIN } from "@/scripts/constants";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { useContext, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import {
   FlatList,
   StyleSheet,
@@ -16,6 +16,7 @@ import {
   View,
 } from "react-native";
 import MapView from "react-native-maps";
+import { getRecentSearches } from "../../scripts/searchStorage";
 import LocationContext from "../context/LocationContext";
 import { useRideStore } from "../store/useRideStore";
 
@@ -34,6 +35,16 @@ export default function LocationPick() {
   const [searchFor] = useState(route?.params?.searchFor || null);
   const mapRef = useRef(null);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [recent, setRecent] = useState([]);
+
+  useEffect(() => {
+    loadSearches();
+  }, []);
+
+  const loadSearches = async () => {
+    const data = await getRecentSearches();
+    setRecent(data);
+  };
 
   async function updateMapLocation(newLocation) {
     const newCoords = {
@@ -79,7 +90,7 @@ export default function LocationPick() {
             if (locationDebounce.current)
               clearTimeout(locationDebounce.current);
             locationDebounce.current = setTimeout(async () => {
-              if (text.length < 2) return setSuggestions([]);
+              if (!text) return;
               try {
                 const res = await handleAutocomplete({
                   input: text,
@@ -151,6 +162,45 @@ export default function LocationPick() {
             )}
           />
         )}
+      </View>
+      <View>
+        <Text style={styles.title}>Recently Used</Text>
+        <FlatList
+          data={recent}
+          keyExtractor={(item) => item.place_id}
+          style={commonStyles.dropdownRecent}
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item }) => (
+            <View style={commonStyles.dropdownPanelRecent}>
+              <Ionicons
+                name="location"
+                size={20}
+                style={styles.dropdownIcon}
+                color="#666"
+              />
+              <TouchableOpacity
+                onPress={async () => {
+                  const coords = await getCoords({ placeId: item.place_id });
+
+                  setLocation(searchFor, { ...item, coords });
+                  navigation.navigate({
+                    name: "RiderHome",
+                  });
+                }}
+                style={styles.item}
+              >
+                <Text numberOfLines={1} style={styles.subtitle}>
+                  {item.description}
+                </Text>
+                <Text
+                  ellipsizeMode="tail"
+                  numberOfLines={1}
+                  style={{ fontSize: 12 }}
+                ></Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        />
       </View>
       <View style={styles.bottomCard}>
         <TextInput

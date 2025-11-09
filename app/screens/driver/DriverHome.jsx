@@ -1,6 +1,7 @@
 import AuthContext from "@/app/context/AuthContext";
 import { LocationContext } from "@/app/context/LocationContext";
 import { setupNotificationListeners } from "@/app/service/notificationService";
+import { commonStyles } from "@/scripts/constants";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import * as Notifications from "expo-notifications";
@@ -11,9 +12,10 @@ import {
   useRef,
   useState,
 } from "react";
-import { Alert, StyleSheet, Text } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
 import WebSocketService from "../../../scripts/WebSocketService";
+import CommonAlert from "../../component/CommonAlert";
 
 export default function DriverHome() {
   const [originCoord, setOriginCoord] = useState({});
@@ -21,14 +23,41 @@ export default function DriverHome() {
   const [polyline, setPolyline] = useState([]);
 
   const { location } = useContext(LocationContext);
-  const { token } = useContext(AuthContext);
+  const { token, user } = useContext(AuthContext);
   const navigation = useNavigation();
 
   const [dutyStatus, setDutyStatus] = useState("AVAILABLE");
   const responseListener = useRef();
 
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertData, setAlertData] = useState({
+    title: "",
+    message: "",
+  });
+
+  const handleConfirm = () => {
+    console.log("User confirmed!");
+    setShowAlert(false);
+  };
+
+  const handleCancel = () => {
+    console.log("User cancelled!");
+    setShowAlert(false);
+  };
+
   useEffect(() => {
-    WebSocketService.connect(token);
+    WebSocketService.connect(token, {
+      event: "onLocationUpdate",
+      driverLocation: {
+        lat: location.latitude,
+        lng: location.longitude,
+      },
+      details: {
+        status: dutyStatus,
+        vehicleType: "car",
+        category: "standard",
+      },
+    });
     WebSocketService.addListener(handleMessage);
     setupNotificationListeners();
 
@@ -48,24 +77,32 @@ export default function DriverHome() {
   }, []);
 
   const handleMessage = (msg) => {
-    console.log("📨 Message from server:", msg);
-    // const parsed = JSON.parse(msg);
-    // Alert.alert(
-    //   parsed.message,
-    //   `Total distance : ${parsed.distance} Estimated Fare ${parsed.fare}`
-    // );
+    const parsed = typeof msg == "string" ? JSON.parse(msg) : msg;
+    console.log("📨 Message from server:", parsed);
+    setAlertData({
+      title: parsed.message,
+      message: `Total distance : ${parsed.data?.distanceKm} Estimated Fare ${parsed.data?.fareEstimated}`,
+    });
+    setShowAlert(true);
   };
 
   useLayoutEffect(() => {
     const toggleDuty = () => {
-      setDutyStatus(dutyStatus === "AVAILABLE" ? "INACTIVE" : "AVAILABLE");
-      Alert.alert(`Driver is now ${dutyStatus}`);
+      const status = dutyStatus === "AVAILABLE" ? "INACTIVE" : "AVAILABLE";
+      setDutyStatus(status);
+      WebSocketService.send({
+        event: "onLocationUpdate",
+        details: {
+          status,
+        },
+      });
+      // Alert.alert(`Driver is now ${dutyStatus}`);
     };
 
     navigation.setOptions({
       headerRight: () => (
         <>
-          <Text>{dutyStatus}</Text>
+          {/* <Text>{dutyStatus}</Text> */}
           <Ionicons
             style={{ marginRight: 20 }}
             onPress={toggleDuty}
@@ -80,6 +117,16 @@ export default function DriverHome() {
 
   return (
     <>
+      <CommonAlert
+        visible={showAlert}
+        title={alertData.title}
+        message={alertData.message}
+        leftButtonTitle="Decline"
+        rightButtonTitle="Accept"
+        onLeftPress={handleCancel}
+        onRightPress={handleConfirm}
+      />
+
       <MapView
         style={StyleSheet.absoluteFill}
         showsUserLocation={true}
@@ -90,14 +137,18 @@ export default function DriverHome() {
           longitudeDelta: 0.05,
         }}
         onRegionChangeComplete={(newRegion) => {
+          console.log("Driver location changed");
           WebSocketService.send({
             event: "onLocationUpdate",
-            message: "Driver ping",
             driverLocation: {
               lat: newRegion.latitude,
               lng: newRegion.longitude,
             },
-            driverStatus: dutyStatus,
+            details: {
+              status: dutyStatus,
+              vehicleType: "car",
+              category: "standard",
+            },
           });
         }}
       >
@@ -125,6 +176,34 @@ export default function DriverHome() {
           />
         )}
       </MapView>
+      <View style={commonStyles.overlayContainer}>
+        <TouchableOpacity
+          style={commonStyles.overlayIcon}
+          onPress={() => {
+            navigation.toggleDrawer();
+          }}
+        >
+          <Ionicons
+            name="menu-outline"
+            size={20}
+            color={"#000"}
+            style={{ padding: 10 }}
+          ></Ionicons>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={commonStyles.overlayIcon}
+          onPress={() => {
+            navigation.navigate("Notifications");
+          }}
+        >
+          <Ionicons
+            name="notifications-outline"
+            size={20}
+            color={"#000"}
+            style={{ padding: 10 }}
+          ></Ionicons>
+        </TouchableOpacity>
+      </View>
     </>
   );
 }

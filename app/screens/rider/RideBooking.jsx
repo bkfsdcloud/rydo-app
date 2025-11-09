@@ -1,11 +1,11 @@
 import { LocationContext } from "@/app/context/LocationContext";
 import { handleGetRoute } from "@/scripts/api/geoApi";
-import { createRide } from "@/scripts/api/riderApi";
+import { activeRide, available, createRide } from "@/scripts/api/riderApi";
 import { commonStyles } from "@/scripts/constants";
 import { Ionicons } from "@expo/vector-icons";
 import polylineTool from "@mapbox/polyline";
 import { useContext, useEffect, useRef, useState } from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
 import { useRideStore } from "../../store/useRideStore";
 import RideSummaryModal from "./RideSummaryModal";
@@ -16,24 +16,41 @@ export default function RideBooking({ navigation }) {
   const {
     origin,
     destination,
-    distance,
     setDistance,
+    setDuration,
+    distanceKm,
+    setDistanceKm,
+    durationMin,
+    setDurationMin,
     fare,
-    setFare,
+    setFares,
+    transportMode,
     setTransportMode,
+    category,
     setCategory,
+    paymentMethod,
     setPaymentMethod,
   } = useRideStore();
 
   const [polyline, setPolyline] = useState([]);
 
   const [showModal, setShowModal] = useState(false);
+  const [rideData, setRideData] = useState(null);
 
   const mapRef = useRef(null);
 
   useEffect(() => {
     handleRoute();
   }, []);
+
+  useEffect(() => {
+    if (mapRef.current && polyline.length > 0) {
+      mapRef.current.fitToCoordinates(polyline, {
+        edgePadding: { top: 80, right: 80, bottom: 80, left: 80 },
+        animated: true,
+      });
+    }
+  }, [polyline]);
 
   const handleRoute = async () => {
     if (!origin.place_id || !destination.place_id) return;
@@ -50,26 +67,36 @@ export default function RideBooking({ navigation }) {
       );
     }
     setPolyline(coordinates);
-    setFare(res.fare);
+    setFares(res.fares);
     setDistance(res.distance);
+    setDuration(res.duration);
+    setDistanceKm(res.distanceKm);
+    setDurationMin(res.durationMin);
     setTransportMode("Car");
-    setCategory("Standard");
+    setCategory("standard");
     setPaymentMethod("Cash");
     setTimeout(() => setShowModal(true), 500);
   };
 
   const handleBookRide = async () => {
     setShowModal(false);
-    await createRide({
+    const body = {
       fareEstimated: fare,
       pickupLat: origin.coords.lat,
       pickupLng: origin.coords.lng,
       dropLat: destination.coords.lat,
       dropLng: destination.coords.lng,
-      distanceKm: distance,
+      distanceKm: distanceKm,
       pickupLocation: origin.description,
       dropLocation: destination.description,
-    });
+      duration: durationMin,
+      transportMode,
+      category,
+      paymentMethod,
+    };
+    console.log("body: ", body);
+    const res = await createRide(body);
+    Alert.alert("Ride Created", res.data);
   };
 
   return (
@@ -78,7 +105,6 @@ export default function RideBooking({ navigation }) {
         ref={mapRef}
         paddingAdjustmentBehavior="automatic"
         style={styles.map}
-        showsUserLocation={true}
         region={{
           latitude: origin.coords.lat || location.latitude,
           longitude: origin.coords.lng || location.longitude,
@@ -89,6 +115,9 @@ export default function RideBooking({ navigation }) {
         <Marker
           anchor={{ x: 0.5, y: 0.5 }}
           pinColor="green"
+          icon={
+            <Ionicons name="pin-outline" size={20} color={"green"}></Ionicons>
+          }
           coordinate={{
             latitude: origin.coords.lat,
             longitude: origin.coords.lng,
@@ -97,6 +126,9 @@ export default function RideBooking({ navigation }) {
         />
         <Marker
           pinColor="red"
+          icon={
+            <Ionicons name="pin-outline" size={20} color={"red"}></Ionicons>
+          }
           anchor={{ x: 0.5, y: 0.5 }}
           coordinate={{
             latitude: destination.coords.lat,
@@ -114,6 +146,9 @@ export default function RideBooking({ navigation }) {
         )}
       </MapView>
       <View style={commonStyles.overlayContainer}>
+        <Text style={{ fontSize: 22, color: "#fff" }}>
+          Status: {rideData?.status}
+        </Text>
         <TouchableOpacity
           style={commonStyles.overlayIcon}
           onPress={() => {
@@ -127,9 +162,48 @@ export default function RideBooking({ navigation }) {
             style={{ padding: 10 }}
           ></Ionicons>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={commonStyles.overlayIcon}
+          onPress={async () => {
+            const res = await activeRide({});
+            setRideData(res.data);
+          }}
+        >
+          <Ionicons
+            name="location-outline"
+            size={20}
+            color={"#000"}
+            style={{ padding: 10 }}
+          ></Ionicons>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={commonStyles.overlayIcon}
+          onPress={async () => {
+            const body = {
+              fareEstimated: fare,
+              pickupLat: origin.coords.lat,
+              pickupLng: origin.coords.lng,
+              dropLat: destination.coords.lat,
+              dropLng: destination.coords.lng,
+              distanceKm: distanceKm,
+              pickupLocation: origin.description,
+              dropLocation: destination.description,
+              duration: durationMin,
+            };
+            const res = await available({ rideData: body });
+            console.log(res);
+          }}
+        >
+          <Ionicons
+            name="beer-outline"
+            size={20}
+            color={"#000"}
+            style={{ padding: 10 }}
+          ></Ionicons>
+        </TouchableOpacity>
       </View>
 
-      <View style={styles.bottomCard}>
+      <View style={{}}>
         <RideSummaryModal
           visible={showModal}
           onClose={() => setShowModal(false)}

@@ -1,11 +1,7 @@
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import { useContext } from "react";
 import AuthContext from "../context/AuthContext";
-import {
-  default as AdminTabs,
-  default as DriverTabs,
-  default as RiderTabs,
-} from "../navigation/UserTabs";
+import RiderStacks, { AdminStacks, DriverStacks } from "../navigation/UserTabs";
 import Profile from "../screens/profile/Profile";
 
 const Drawer = createDrawerNavigator();
@@ -14,13 +10,14 @@ export default function DrawerScreens() {
   const { user } = useContext(AuthContext);
 
   const getTabs = () => {
+    console.log("Role : ", user?.role);
     switch (user?.role) {
       case "CUSTOMER":
-        return RiderTabs;
+        return RiderStacks;
       case "DRIVER":
-        return DriverTabs;
+        return DriverStacks;
       default:
-        return AdminTabs;
+        return AdminStacks;
     }
   };
 
