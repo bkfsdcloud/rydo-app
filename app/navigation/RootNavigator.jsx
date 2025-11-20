@@ -2,15 +2,21 @@ import { Ionicons } from "@expo/vector-icons";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import React, { useContext } from "react";
 import { TouchableOpacity } from "react-native";
+import CarNavigation from "../component/CarNavigation";
 import AuthContext from "../context/AuthContext";
 import AuthStack from "../navigation/auth/AuthStack";
 import DrawerScreens from "../screens/DrawerScreen";
+import ChatScreen from "../screens/profile/ChatScreen";
 import Favorites from "../screens/profile/Favorites";
 import Notifications from "../screens/profile/Notifications";
 import Payments from "../screens/profile/Payments";
 import Profile from "../screens/profile/Profile";
 import ProfileDetails from "../screens/profile/ProfileDetails";
 import RideHistory from "../screens/profile/RideHistory";
+import RideHistoryDetail from "../screens/profile/RideHistoryDetail";
+import Wallet from "../screens/profile/Wallet";
+import PayFromWalletScreen from "../screens/profile/wallet/PayFromWalletScreen";
+import WalletTransaction from "../screens/profile/WalletTransaction";
 import RideTracking from "../screens/RideTracking";
 
 const Stack = createNativeStackNavigator();
@@ -59,7 +65,7 @@ export default function RootNavigator() {
             name="ProfileDetails"
             component={ProfileDetails}
             options={{
-              title: "Profile Details",
+              title: "Profile",
             }}
           />
           <Stack.Screen
@@ -70,7 +76,7 @@ export default function RootNavigator() {
           <Stack.Screen
             name="RideHistory"
             component={RideHistory}
-            options={{ title: "My Rides" }}
+            options={{ title: "Booking History" }}
           />
           <Stack.Screen
             name="Favorites"
@@ -82,6 +88,40 @@ export default function RootNavigator() {
             component={Notifications}
             options={{ title: "Notifications" }}
           />
+          <Stack.Screen
+            name="Wallet"
+            component={Wallet}
+            options={{ title: "Wallet" }}
+          />
+          <Stack.Screen
+            name="WalletTransaction"
+            component={WalletTransaction}
+            options={{ title: "Transaction" }}
+          />
+
+          <Stack.Screen
+            name="PayFromWalletScreen"
+            component={PayFromWalletScreen}
+            options={{ title: "Pay From Wallet" }}
+          />
+          <Stack.Screen
+            name="CarNavigation"
+            component={CarNavigation}
+            options={{ title: "Navigation" }}
+          />
+
+          <Stack.Screen
+            name="RideHistoryDetail"
+            component={RideHistoryDetail}
+            options={{ title: "Ride Details" }}
+          />
+
+          <Stack.Screen
+            name="ChatScreen"
+            component={ChatScreen}
+            options={{ title: "User Chat" }}
+          />
+
           <Stack.Screen
             name="Tracking"
             component={RideTracking}

@@ -1,7 +1,10 @@
+import { commonStyles } from "@/scripts/constants";
 import { useNavigation } from "@react-navigation/native";
 import React, { useContext, useState } from "react";
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -60,113 +63,155 @@ export default function LoginScreen() {
       } else if (response.data.message === "New user") {
         navigation.navigate("SignUp", { phone });
       }
-      Toast.show({
-        type: "success",
-        text1: "Success",
-        text2: response.data.message,
-        position: "top",
-      });
+      // Toast.show({
+      //   type: "success",
+      //   text1: "Success",
+      //   text2: response.data.message,
+      //   position: "top",
+      // });
     } catch (error) {
       console.log(error);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <View
-        style={{
-          flex: 1,
-          position: "absolute",
-          top: 100,
-          alignItems: "center",
-        }}
+    <>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
       >
-        <Text style={{ fontSize: 30 }}>Welcome To</Text>
-        <Text style={{ fontSize: 30, fontWeight: "700" }}>Taxi Taxi!</Text>
-      </View>
-      <Text style={{ fontSize: 18, marginBottom: 10, fontWeight: "500" }}>
-        Login with your Phone Number
-      </Text>
-      <TextInput
-        placeholder="Ex. 9841232587"
-        keyboardType="number-pad"
-        returnKeyType="done"
-        clearButtonMode="always"
-        value={phone}
-        placeholderTextColor="#888"
-        maxLength={10}
-        onChangeText={setPhone}
-        style={styles.input}
-      />
-      {generateOtp && (
-        <TextInput
-          placeholder="OTP"
-          clearButtonMode="always"
-          returnKeyType="done"
-          keyboardType="number-pad"
-          placeholderTextColor="#888"
-          value={otp}
-          maxLength={6}
-          onChangeText={setOtp}
-          style={styles.input}
-        />
-      )}
-      <View style={styles.roleRow}>
-        {generateOtp ? (
-          <>
-            <TouchableOpacity
-              onPress={() => verifyOtpI()}
-              disabled={otp?.length !== 6}
+        <View style={commonStyles.container}>
+          <View style={styles.header}>
+            <Text style={styles.welcomeText}>Welcome to</Text>
+            <Text style={styles.brandText}>Taxi Taxi!</Text>
+          </View>
+          {/* <Image
+            source={require("@/assets/images/car-img-2.png")}
+            style={{ height: 300, width: "100%" }}
+          ></Image> */}
+          <View style={[commonStyles.column]}>
+            <Text style={styles.sectionTitle}>
+              Login with your Phone Number
+            </Text>
+            <TextInput
+              textContentType="telephoneNumber"
+              placeholder="eg. 9841232587"
+              keyboardType="number-pad"
+              returnKeyType="done"
+              clearButtonMode="always"
+              value={phone}
+              placeholderTextColor="#929292ff"
+              maxLength={11}
+              onChangeText={(txt) => {
+                setPhone(txt.replaceAll("-", ""));
+              }}
+              allowFontScaling={false}
               style={[
-                styles.roleBtn,
-                isValidOtp ? { backgroundColor: "grey" } : {},
+                commonStyles.input,
+                commonStyles.textAlignCenter,
+                { backgroundColor: "#fff" },
               ]}
-            >
-              <Text style={styles.textWhite}>Verify</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => resendOtp()}
-              style={[styles.roleBtn]}
-            >
-              <Text style={styles.textWhite}>Resend OTP</Text>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <TouchableOpacity
-            disabled={phone?.length !== 10}
-            onPress={() => triggerOtp()}
-            style={[
-              styles.roleBtn,
-              isDisabled ? { backgroundColor: "grey" } : {},
-            ]}
-          >
-            <Text style={[styles.textWhite]}>Send OTP</Text>
-          </TouchableOpacity>
-        )}
-        {/* <TouchableOpacity
-          onPress={() => navigation.navigate("Signup")}
-          style={[styles.roleBtn]}
-        >
-          <Text>Signup</Text>
-        </TouchableOpacity> */}
-      </View>
-      <View style={{ position: "absolute", bottom: 30 }}>
-        <Text style={{ fontSize: 12, fontWeight: "600" }}>
-          By Continuing, You Agree to Taxi Taxi's{" "}
-          <Text style={{ color: "red" }}>Terms & Conditions</Text> And{" "}
-          <Text style={{ color: "red" }}>Privacy Policy</Text>
-        </Text>
-      </View>
-    </View>
+            />
+            {generateOtp && (
+              <TextInput
+                placeholder="OTP"
+                clearButtonMode="always"
+                textContentType="oneTimeCode"
+                returnKeyType="done"
+                keyboardType="number-pad"
+                placeholderTextColor="#929292ff"
+                value={otp}
+                maxLength={6}
+                allowFontScaling={false}
+                onChangeText={setOtp}
+                style={[
+                  commonStyles.input,
+                  commonStyles.textAlignCenter,
+                  { backgroundColor: "#fff" },
+                ]}
+              />
+            )}
+            <View style={commonStyles.row}>
+              {generateOtp ? (
+                <>
+                  <TouchableOpacity
+                    onPress={() => verifyOtpI()}
+                    disabled={otp?.length !== 6}
+                    style={[
+                      commonStyles.button,
+                      isValidOtp ? { backgroundColor: "grey" } : {},
+                    ]}
+                  >
+                    <Text style={commonStyles.buttonText}>Verify</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => resendOtp()}
+                    style={[commonStyles.button]}
+                  >
+                    <Text style={commonStyles.buttonText}>Resend OTP</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <TouchableOpacity
+                  disabled={phone?.length !== 10}
+                  onPress={() => triggerOtp()}
+                  style={[
+                    commonStyles.button,
+                    isDisabled ? commonStyles.disabled : {},
+                  ]}
+                >
+                  <Text style={[commonStyles.buttonText]}>Send OTP</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+          <Text style={styles.disclaimer}>
+            By Continuing, You Agree to the Red Taxi's{" "}
+            <Text style={styles.link}>Terms & Conditions</Text> And{" "}
+            <Text style={styles.link}>Privacy Policy</Text>
+          </Text>
+        </View>
+      </KeyboardAvoidingView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
+  header: {
+    alignItems: "center",
+    marginTop: 28,
+  },
+  welcomeText: {
+    fontSize: 16,
+    color: "#555",
+  },
+  brandText: {
+    fontSize: 40,
+    fontWeight: "800",
+    color: "#111",
+    marginTop: 4,
+  },
+  sectionTitle: {
+    marginTop: 12,
+    fontWeight: "700",
+    fontSize: 16,
+    textAlign: "center",
+  },
+  disclaimer: {
+    fontSize: 12,
+    textAlign: "center",
+    color: "#555",
+    marginTop: 18,
+    paddingHorizontal: 20,
+    lineHeight: 20,
+  },
+  link: {
+    color: "#d12c2c",
+    fontWeight: "700",
+  },
   container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 16,
+    padding: 10,
   },
   title: { fontSize: 20, marginBottom: 12 },
   input: {
@@ -177,7 +222,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     textAlign: "center",
   },
-  roleRow: { flexDirection: "row", marginBottom: 12 },
+  roleRow: { flexDirection: "row", justifyContent: "center" },
   roleBtn: {
     padding: 10,
     marginHorizontal: 6,

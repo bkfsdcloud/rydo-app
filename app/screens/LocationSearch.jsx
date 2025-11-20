@@ -1,40 +1,37 @@
 import { getCoords, handleAutocomplete } from "@/scripts/api/geoApi";
-import { commonStyles } from "@/scripts/constants";
-import { Ionicons } from "@expo/vector-icons";
+import { commonStyles, ORIGIN } from "@/scripts/constants";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import {
-  FlatList,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { getRecentSearches, saveSearch } from "../../scripts/searchStorage";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { allFavourites, markFavourite } from "../../scripts/api/miscApi";
+import BottomPanel from "../component/BottomPanel";
+import LocationInput from "../component/LocationInput";
+import SuggestionList from "../component/SuggestionList";
 import { useRideStore } from "../store/useRideStore";
+import useUserStore from "../store/useUserStore";
 
 export default function LocationSearch() {
   const navigation = useNavigation();
   const route = useRoute();
-
   const { setLocation } = useRideStore();
+  const { setFavourites } = useUserStore();
 
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestionDropdown, setShowSuggestionDropdown] = useState(false);
 
   const locationDebounce = useRef(null);
   const [searchFor] = useState(route?.params?.searchFor || null);
+  const searchBox = useRef(null);
 
-  const [recent, setRecent] = useState([]);
+  const [refObj, setRefObj] = useState(null);
+  const [bottomView, setBottomView] = useState("DEFAULT");
+  const favNameRef = useRef(null);
+  const sheetRef = useRef(null);
 
-  useEffect(() => {
-    loadSearches();
-  }, []);
-
-  const loadSearches = async () => {
-    const data = await getRecentSearches();
-    setRecent(data);
+  const handleSelectRecent = async (item) => {
+    const coords = await getCoords({ placeId: item.place_id });
+    setLocation(searchFor, { ...item, coords });
+    setTimeout(() => navigation.replace("RiderHome"), 500);
   };
 
   useLayoutEffect(() => {
@@ -43,189 +40,118 @@ export default function LocationSearch() {
     });
   }, [route.params?.title]);
 
+  const onSearch = useCallback(async (text) => {
+    setShowSuggestionDropdown(false);
+
+    if (!text) {
+      setSuggestions([]);
+      return;
+    }
+    try {
+      const res = await handleAutocomplete({
+        input: text,
+      });
+      setSuggestions(res || []);
+      setShowSuggestionDropdown(true);
+    } catch {
+      setSuggestions([]);
+      setShowSuggestionDropdown(false);
+    }
+  }, []);
+
+  const addFavourite = (data) => {
+    setRefObj(data);
+    setBottomView("FAV");
+    sheetRef.current?.expand();
+  };
+
   return (
-    <View style={styles.container}>
-      <TextInput
-        autoCorrect={false}
-        autoCapitalize="none"
-        spellCheck={false}
-        clearButtonMode="while-editing"
+    <View style={[commonStyles.container, { backgroundColor: "#fff" }]}>
+      <LocationInput
+        placeholder="Search or Select Location"
         onChangeText={(text) => {
-          setShowSuggestionDropdown(false);
+          searchBox.current.value = text;
           if (locationDebounce.current) clearTimeout(locationDebounce.current);
           locationDebounce.current = setTimeout(async () => {
-            if (!text) return;
-            try {
-              const res = await handleAutocomplete({
-                input: text,
-              });
-              setSuggestions(res || []);
-              setShowSuggestionDropdown(true);
-            } catch {
-              setSuggestions([]);
-              setShowSuggestionDropdown(false);
-            }
-          }, 1000); // 500ms debounce
+            onSearch(text);
+          }, 1000);
         }}
-        placeholder="Search or Select Location"
-        placeholderTextColor={"grey"}
-        style={styles.input}
+        iconColor={searchFor === ORIGIN ? "green" : "red"}
+        style={{ backgroundColor: "#f0f0f0ff" }}
+        placeholderTextColor={"black"}
+        ref={searchBox}
       />
-      {showSuggestionDropdown && (
-        <FlatList
-          data={suggestions}
-          keyExtractor={(item) => item.place_id}
-          style={styles.dropdown}
-          keyboardShouldPersistTaps="handled"
-          renderItem={({ item }) => (
-            <View style={styles.dropdownPanel}>
-              <Ionicons
-                name="location-outline"
-                size={20}
-                style={styles.dropdownIcon}
-                color="#666"
-              />
-              <TouchableOpacity
-                onPress={async () => {
-                  setShowSuggestionDropdown(false);
-                  const coords = await getCoords({ placeId: item.place_id });
-                  if (item?.description) {
-                    await saveSearch({
-                      description: item?.description.trim(),
-                      place_id: item?.place_id.trim(),
-                      secondaryText: item?.secondaryText.trim(),
-                    });
-                    loadSearches();
-                  }
-                  console.log("item: ", item);
-                  setLocation(searchFor, { ...item, coords });
-                  navigation.navigate({
-                    name: "RiderHome",
-                  });
-                }}
-                style={styles.item}
-              >
-                <Text numberOfLines={1} style={{ fontSize: 14 }}>
-                  {item.description}
-                </Text>
-                <Text
-                  ellipsizeMode="tail"
-                  numberOfLines={1}
-                  style={{ fontSize: 12 }}
-                >
-                  {item.secondaryText}
-                </Text>
-              </TouchableOpacity>
-              <Ionicons
-                name="heart-outline"
-                size={20}
-                style={styles.dropdownIcon}
-                color="#666"
-              />
-            </View>
-          )}
-        />
-      )}
-      <View>
-        <Text style={styles.title}>Recently Used</Text>
-        <FlatList
-          data={recent}
-          keyExtractor={(item) => item.place_id}
-          style={commonStyles.dropdownRecent}
-          keyboardShouldPersistTaps="handled"
-          renderItem={({ item }) => (
-            <View style={commonStyles.dropdownPanelRecent}>
-              <Ionicons
-                name="location"
-                size={20}
-                style={styles.dropdownIcon}
-                color="#666"
-              />
-              <TouchableOpacity
-                onPress={async () => {
-                  const coords = await getCoords({ placeId: item.place_id });
+      <SuggestionList
+        search={searchBox.current?.value}
+        suggestions={suggestions}
+        showSuggestionDropdown={showSuggestionDropdown}
+        setShowSuggestionDropdown={setShowSuggestionDropdown}
+        handleSelectRecent={handleSelectRecent}
+        addFavourite={addFavourite}
+      />
+      <BottomPanel ref={sheetRef}>
+        {bottomView === "DEFAULT" && (
+          <View>
+            <Text
+              style={[commonStyles.banner, { bottom: 10, alignSelf: "center" }]}
+            >
+              Not able to find the location
+            </Text>
+            <TouchableOpacity
+              style={commonStyles.button}
+              onPress={() => {
+                navigation.navigate(
+                  "LocationPick",
+                  {
+                    searchFor,
+                  },
+                  { merge: true }
+                );
+              }}
+            >
+              <Text style={commonStyles.buttonText}>
+                Pick location from map
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {bottomView === "FAV" && (
+          <View style={commonStyles.column}>
+            <LocationInput
+              showIcon={false}
+              placeholder="Name"
+              placeholderTextColor={"grey"}
+              ref={favNameRef}
+              onChangeText={(text) => {
+                favNameRef.current.value = text;
+              }}
+            />
 
-                  setLocation(searchFor, { ...item, coords });
-                  navigation.navigate({
-                    name: "RiderHome",
-                  });
-                }}
-                style={styles.item}
-              >
-                <Text numberOfLines={1} style={styles.subtitle}>
-                  {item.description}
-                </Text>
-                <Text
-                  ellipsizeMode="tail"
-                  numberOfLines={1}
-                  style={{ fontSize: 12 }}
-                ></Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        />
-      </View>
-      <View style={styles.bottomCard}>
-        <Text style={styles.title}>Not able to find the location</Text>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => {
-            navigation.navigate(
-              "LocationPick",
-              {
-                searchFor,
-              },
-              { merge: true }
-            );
-          }}
-        >
-          <Text style={styles.buttonText}>Pick location from map</Text>
-        </TouchableOpacity>
-      </View>
+            <TouchableOpacity
+              style={commonStyles.button}
+              onPress={async () => {
+                await markFavourite({
+                  placeId: refObj?.place_id,
+                  description: refObj?.description,
+                  secondaryText: refObj?.secondaryText,
+                  name: favNameRef.current.value,
+                });
+                setBottomView("DEFAULT");
+                sheetRef.current?.expand();
+                const resp = await allFavourites();
+                setFavourites(resp.data);
+              }}
+            >
+              <Text style={commonStyles.buttonText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </BottomPanel>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 10 },
-  overlayContainer: {
-    position: "absolute",
-    top: 40,
-    left: 10,
-    right: 10,
-    zIndex: 999,
-  },
-  map: { flex: 1 },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 10,
-    borderRadius: 5,
-    backgroundColor: "#fff",
-  },
-  dropdown: {
-    position: "absolute",
-    top: 50,
-    width: "100%",
-    maxHeight: 150,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 5,
-    zIndex: 1000,
-    left: 10,
-  },
-  item: {
-    padding: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    width: "90%",
-    flexGrow: 1,
-  },
-  dropdownIcon: {
-    padding: 5,
-    top: 5,
-  },
   bottomCard: {
     position: "absolute",
     bottom: 0,
@@ -241,27 +167,5 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -2 },
     shadowRadius: 6,
     elevation: 5,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "600",
-    paddingTop: 5,
-  },
-  subtitle: {
-    color: "#777",
-    marginTop: 4,
-  },
-  button: {
-    backgroundColor: "#007BFF",
-    marginTop: 15,
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  dropdownPanel: {
-    flex: 1,
-    flexDirection: "row",
-    width: "90%",
-    padding: 3,
   },
 });

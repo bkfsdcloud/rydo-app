@@ -1,4 +1,3 @@
-import registerForPushNotificationsAsync from "@/app/service/notificationService";
 import { commonStyles } from "@/scripts/constants";
 import { useRoute } from "@react-navigation/native";
 import { useContext, useEffect, useState } from "react";
@@ -31,17 +30,17 @@ export default function SignUp({ navigation }) {
   const route = useRoute();
 
   useEffect(() => {
-    async function initNotifications() {
-      const result = await registerForPushNotificationsAsync();
-      if (route.params?.phone) {
-        updateUser("phone", route.params?.phone);
-      }
-      if (result) {
-        updateUser("deviceId", result.token);
-        console.log(`Registered with ${result.provider} token:`, result.token);
-      }
-    }
-    initNotifications();
+    // async function initNotifications() {
+    //   const result = await registerForPushNotificationsAsync();
+    //   if (route.params?.phone) {
+    //     updateUser("phone", route.params?.phone);
+    //   }
+    //   if (result) {
+    //     updateUser("deviceId", result.token);
+    //     console.log(`Registered with ${result.provider} token:`, result.token);
+    //   }
+    // }
+    // initNotifications();
   }, []);
 
   const handleSubmit = async () => {

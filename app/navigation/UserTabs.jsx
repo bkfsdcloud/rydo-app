@@ -30,6 +30,7 @@ export function DriverStacks() {
         name="Driver"
         component={DriverHome}
         options={{
+          headerShown: false,
           StackBarIcon: ({ focused, color, size }) =>
             placeIcon("car-outline", focused, color, size),
         }}

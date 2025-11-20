@@ -1,181 +1,370 @@
-import AuthContext from "@/app/context/AuthContext";
-import { LocationContext } from "@/app/context/LocationContext";
-import { setupNotificationListeners } from "@/app/service/notificationService";
-import { commonStyles } from "@/scripts/constants";
+import { useAlert } from "@/app/context/AlertContext";
 import { Ionicons } from "@expo/vector-icons";
+import polylineTool from "@mapbox/polyline";
 import { useNavigation } from "@react-navigation/native";
-import * as Notifications from "expo-notifications";
 import {
+  useCallback,
   useContext,
   useEffect,
-  useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { Alert, Text, TextInput, TouchableOpacity, View } from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
-import WebSocketService from "../../../scripts/WebSocketService";
-import CommonAlert from "../../component/CommonAlert";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
+import { handleGetRoute } from "../../../scripts/api/geoApi";
+import { updateStatus } from "../../../scripts/api/riderApi";
+import { commonStyles } from "../../../scripts/constants";
+import BottomPanel from "../../component/BottomPanel";
+import { LocationContext } from "../../context/LocationContext";
+import SocketContext from "../../context/SocketContext";
+import { useRideStore } from "../../store/useRideStore";
+import ChatScreen from "../profile/ChatScreen";
 
 export default function DriverHome() {
-  const [originCoord, setOriginCoord] = useState({});
-  const [destCoord, setDestCoord] = useState({});
-  const [polyline, setPolyline] = useState([]);
-
   const { location } = useContext(LocationContext);
-  const { token, user } = useContext(AuthContext);
+  const { sendMessage, addListener, removeListener } =
+    useContext(SocketContext);
+
   const navigation = useNavigation();
+  const {
+    id,
+    setId,
+    origin,
+    setOrigin,
+    destination,
+    setDestination,
+    distance,
+    setDistance,
+    setDuration,
+    fare,
+    setFare,
+    distanceKm,
+    setDistanceKm,
+    setDurationMin,
+    status,
+    setStatus,
+    resetRide,
+  } = useRideStore();
 
   const [dutyStatus, setDutyStatus] = useState("AVAILABLE");
-  const responseListener = useRef();
+  const mapRef = useRef(null);
+  const [reason, setReason] = useState("");
+  const [showReason, setShowReason] = useState(false);
+  const [localPolyline, setLocalPolyline] = useState([]);
+  // const [showAlert, setShowAlert] = useState(false);
+  const [tempLocation, setTempLocation] = useState({
+    description: "",
+    coords: null,
+  });
+  const [steps, setSteps] = useState([]);
+  const { showAlert, hideAlert } = useAlert();
 
-  const [showAlert, setShowAlert] = useState(false);
-  const [alertData, setAlertData] = useState({
-    title: "",
-    message: "",
+  const sheetRef = useRef(null);
+  const [closablePan, setClosablePan] = useState(false);
+  const [bottomView, setBottomView] = useState("DEFAULT");
+
+  const sheetY = useSharedValue(0);
+  const floatingStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        {
+          translateY: withTiming(-sheetY.get() - 50),
+        },
+      ],
+    };
   });
 
-  const handleConfirm = () => {
-    console.log("User confirmed!");
-    setShowAlert(false);
+  useEffect(() => {
+    // setDefault();
+    if (status === "PENDING") {
+      showAlert({
+        title: "Ride Request!",
+        message: `Total distance : ${distance} km Estimated Fare ₹${fare}`,
+        leftText: "Reject",
+        rightText: "Accept",
+        onLeft: () => handleCancel,
+        onRight: () => handleConfirm,
+      });
+      setShowReason(true);
+    } else if (status === "ASSIGNED" && localPolyline?.length === 0) {
+      setTempLocation({
+        description: "You are here",
+        coords: { lat: location.lat, lng: location.lng },
+      });
+      handleRoute(status);
+    } else if (status === "ONGOING" && !localPolyline?.length) {
+      handleRoute(status);
+    }
+  }, [status, distanceKm, fare]);
+
+  const setDefault = () => {
+    setBottomView("DEFAULT");
+    setClosablePan(false);
+    sheetRef.current?.expand();
   };
 
-  const handleCancel = () => {
-    console.log("User cancelled!");
-    setShowAlert(false);
+  const handleConfirm = async () => {
+    hideAlert();
+    const res = await updateStatus({
+      rideData: { id: id, status: "ACCEPTED" },
+    });
+    if (res?.data) {
+      setStatus(res?.data.status);
+      handleRoute(res?.data.status);
+    }
+  };
+
+  const handleCancel = async () => {
+    hideAlert();
+    setShowReason(false);
+    const res = await updateStatus({
+      rideData: { id: id, reason, status: "REJECTED" },
+    });
+    if (res?.data) {
+      setStatus(null);
+      setTempLocation({});
+      resetRide();
+      setLocalPolyline([]);
+    }
+  };
+
+  const handleToPickup = async (status) => {
+    if (status) {
+      await updateStatus({
+        rideData: { id: id, status: status },
+      });
+      setStatus(status);
+      setTempLocation({});
+    }
+  };
+
+  const handleStart = async () => {
+    setTempLocation({});
+    const res = await updateStatus({
+      rideData: { id: id, status: "ONGOING" },
+    });
+    if (res?.data) {
+      setStatus(res?.data.status);
+      handleRoute(res?.data.status);
+    }
+  };
+
+  const handleComplete = async () => {
+    const res = await updateStatus({
+      rideData: { id: id, status: "COMPLETED", finalFare: fare },
+    });
+    if (res?.data) {
+      resetRide();
+      setLocalPolyline([]);
+    }
   };
 
   useEffect(() => {
-    WebSocketService.connect(token, {
-      event: "onLocationUpdate",
-      driverLocation: {
-        lat: location.latitude,
-        lng: location.longitude,
-      },
-      details: {
-        status: dutyStatus,
-        vehicleType: "car",
-        category: "standard",
-      },
-    });
-    WebSocketService.addListener(handleMessage);
-    setupNotificationListeners();
-
-    responseListener.current =
-      Notifications.addNotificationResponseReceivedListener((response) => {
-        console.log("User tapped notification:", response);
-
-        const rideData = response.notification.request.content.data;
-
-        navigation.navigate(rideData?.screen, { rideId: rideData.rideId });
-      });
-
+    addListener(handleMessage);
     return () => {
-      if (responseListener.current) responseListener.current.remove();
-      WebSocketService.removeListener(handleMessage);
+      removeListener(handleMessage);
     };
   }, []);
 
-  const handleMessage = (msg) => {
-    const parsed = typeof msg == "string" ? JSON.parse(msg) : msg;
-    console.log("📨 Message from server:", parsed);
-    setAlertData({
-      title: parsed.message,
-      message: `Total distance : ${parsed.data?.distanceKm} Estimated Fare ${parsed.data?.fareEstimated}`,
-    });
-    setShowAlert(true);
+  const handleMessage = (parsed) => {
+    if (parsed?.event === "sendMessage") return;
+    console.log("📨 Notification from the rider:", parsed);
+    if (parsed?.data) {
+      setId(parsed?.data?.id);
+      setStatus(parsed?.data?.status);
+      setFare(parsed.data?.fareEstimated);
+
+      showAlert({
+        title: parsed.message,
+        message: `Total distance : ${parsed.data?.distance} KM. Estimated Fare ₹${parsed.data?.fareEstimated}`,
+        leftText: "Reject",
+        rightText: "Accept",
+        onLeft: () => handleCancel,
+        onRight: () => handleConfirm,
+      });
+      setOrigin({
+        description: parsed?.data.pickupLocation,
+        coords: { lat: parsed?.data?.pickupLat, lng: parsed?.data?.pickupLng },
+      });
+      setDestination({
+        description: parsed?.data.dropLocation,
+        coords: { lat: parsed?.data?.dropLat, lng: parsed?.data?.dropLng },
+      });
+    } else {
+      resetRide();
+      Alert.alert("Information", parsed?.message);
+    }
   };
 
-  useLayoutEffect(() => {
-    const toggleDuty = () => {
-      const status = dutyStatus === "AVAILABLE" ? "INACTIVE" : "AVAILABLE";
-      setDutyStatus(status);
-      WebSocketService.send({
-        event: "onLocationUpdate",
-        details: {
-          status,
-        },
-      });
-      // Alert.alert(`Driver is now ${dutyStatus}`);
-    };
-
-    navigation.setOptions({
-      headerRight: () => (
-        <>
-          {/* <Text>{dutyStatus}</Text> */}
-          <Ionicons
-            style={{ marginRight: 20 }}
-            onPress={toggleDuty}
-            color={dutyStatus === "AVAILABLE" ? "green" : "red"}
-            name="clipboard-outline"
-            size={24}
-          ></Ionicons>
-        </>
-      ),
+  const handleRoute = async (status) => {
+    const res = await handleGetRoute({
+      origin:
+        status === "ASSIGNED"
+          ? `${tempLocation.coords ? tempLocation.coords.lat : location.lat},${
+              tempLocation.coords ? tempLocation.coords.lng : location.lng
+            }`
+          : `${origin.coords.lat},${origin.coords.lng}`,
+      destination:
+        status === "ASSIGNED"
+          ? `${origin.coords.lat},${origin.coords.lng}`
+          : `${destination.coords.lat},${destination.coords.lng}`,
     });
-  }, [navigation, dutyStatus]);
 
+    setSteps(res.steps);
+    const coordinates = [];
+    for (let step of res.steps) {
+      const stepPoints = polylineTool.decode(step.polyline.points);
+      stepPoints.forEach(([lat, lng]) =>
+        coordinates.push({ latitude: lat, longitude: lng })
+      );
+    }
+    setLocalPolyline(coordinates);
+    setDistance(res.distance);
+    setDuration(res.duration);
+    setDistanceKm(res.distanceKm);
+    setDurationMin(res.durationMin);
+  };
+
+  const regions = useMemo(
+    () => ({
+      latitude: location.lat,
+      longitude: location.lng,
+      latitudeDelta: 0.003,
+      longitudeDelta: 0.003,
+    }),
+    [location]
+  );
+
+  const originMarkerCb = useMemo(() => {
+    if (!origin.coords) return null;
+    return (
+      <Marker
+        anchor={{ x: 0.5, y: 0.5 }}
+        pinColor="green"
+        icon={
+          <Ionicons
+            name="radio-button-on-outline"
+            size={20}
+            color={"green"}
+          ></Ionicons>
+        }
+        coordinate={{
+          latitude: tempLocation?.coords
+            ? tempLocation?.coords?.lat
+            : origin.coords.lat,
+          longitude: tempLocation?.coords
+            ? tempLocation?.coords?.lng
+            : origin.coords.lng,
+        }}
+        title={tempLocation.description || origin.description}
+        titleVisibility="visible"
+      />
+    );
+  }, [tempLocation, origin.coords]);
+
+  const destMarkerCb = useMemo(() => {
+    if (!origin.coords && !destination.coords) return null;
+    return (
+      <Marker
+        pinColor="red"
+        icon={
+          <Ionicons
+            name="radio-button-on-outline"
+            size={20}
+            color={"red"}
+          ></Ionicons>
+        }
+        anchor={{ x: 0.5, y: 0.5 }}
+        coordinate={{
+          latitude: tempLocation?.coords
+            ? origin.coords.lat
+            : destination.coords && destination.coords.lat,
+          longitude: tempLocation?.coords
+            ? origin.coords.lng
+            : destination.coords && destination.coords.lng,
+        }}
+        title={
+          tempLocation?.coords ? origin.description : destination.description
+        }
+      />
+    );
+  }, [tempLocation.coords, origin.coords, destination.coords]);
+
+  const polyLineCb = useMemo(() => {
+    if (!localPolyline?.length) return null;
+
+    return (
+      <Polyline
+        coordinates={localPolyline}
+        strokeWidth={5}
+        strokeColor="blue"
+        geodesic={true}
+      />
+    );
+  }, [localPolyline]);
+
+  const onRegionChangeCompleteCb = useCallback(
+    async (newRegion, isGesture) => {
+      if ((!id || id === 0) && isGesture) {
+        console.log("Updating location :", id);
+        sendMessage({
+          event: "onLocationUpdate",
+          driverLocation: {
+            lat: newRegion.latitude,
+            lng: newRegion.longitude,
+          },
+          details: {
+            vehicleType: "car",
+            category: "standard",
+          },
+        });
+        setTempLocation({
+          description: "You are here",
+          coords: { lat: newRegion.latitude, lng: newRegion.longitude },
+        });
+      }
+    },
+    [id]
+  );
+
+  const recentreCurrentLocation = useCallback(() => {
+    mapRef.current?.animateToRegion({
+      latitude: location.lat,
+      longitude: location.lng,
+      latitudeDelta: 0.003,
+      longitudeDelta: 0.003,
+    });
+  }, []);
+
+  const toggleDuty = () => {
+    const status = dutyStatus === "AVAILABLE" ? "INACTIVE" : "AVAILABLE";
+    setDutyStatus(status);
+    sendMessage({
+      event: "onLocationUpdate",
+      details: {
+        status,
+      },
+    });
+  };
   return (
     <>
-      <CommonAlert
-        visible={showAlert}
-        title={alertData.title}
-        message={alertData.message}
-        leftButtonTitle="Decline"
-        rightButtonTitle="Accept"
-        onLeftPress={handleCancel}
-        onRightPress={handleConfirm}
-      />
+      {showReason && (
+        <TextInput
+          placeholder="Reason for cancelling"
+          placeholderTextColor={"grey"}
+          onChangeText={(text) => {
+            setReason(text);
+          }}
+          style={[commonStyles.input, { marginBottom: 10 }]}
+        ></TextInput>
+      )}
 
-      <MapView
-        style={StyleSheet.absoluteFill}
-        showsUserLocation={true}
-        initialRegion={{
-          latitude: location.latitude,
-          longitude: location.longitude,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        }}
-        onRegionChangeComplete={(newRegion) => {
-          console.log("Driver location changed");
-          WebSocketService.send({
-            event: "onLocationUpdate",
-            driverLocation: {
-              lat: newRegion.latitude,
-              lng: newRegion.longitude,
-            },
-            details: {
-              status: dutyStatus,
-              vehicleType: "car",
-              category: "standard",
-            },
-          });
-        }}
-      >
-        {originCoord.lat && (
-          <Marker
-            coordinate={{
-              latitude: originCoord.lat,
-              longitude: originCoord.lng,
-            }}
-            title="Origin"
-          />
-        )}
-        {destCoord.lat && (
-          <Marker
-            coordinate={{ latitude: destCoord.lat, longitude: destCoord.lng }}
-            title="Destination"
-          />
-        )}
-        {polyline.length > 0 && (
-          <Polyline
-            coordinates={polyline}
-            strokeWidth={5}
-            strokeColor="blue"
-            geodesic={true}
-          />
-        )}
-      </MapView>
       <View style={commonStyles.overlayContainer}>
         <TouchableOpacity
           style={commonStyles.overlayIcon}
@@ -192,27 +381,153 @@ export default function DriverHome() {
         </TouchableOpacity>
         <TouchableOpacity
           style={commonStyles.overlayIcon}
-          onPress={() => {
-            navigation.navigate("Notifications");
-          }}
+          onPress={toggleDuty}
+          disabled={status !== null}
         >
           <Ionicons
-            name="notifications-outline"
+            color={dutyStatus === "AVAILABLE" ? "green" : "red"}
+            name="train"
             size={20}
-            color={"#000"}
             style={{ padding: 10 }}
           ></Ionicons>
         </TouchableOpacity>
       </View>
+      <View style={{ flex: 1 }}>
+        <MapView
+          style={{ flex: 1 }}
+          ref={mapRef}
+          provider="google"
+          showsUserLocation={true}
+          showsMyLocationButton={false}
+          initialRegion={regions}
+          onRegionChangeComplete={(newRegion, { isGesture }) =>
+            onRegionChangeCompleteCb(newRegion, isGesture)
+          }
+        >
+          {originMarkerCb}
+          {destMarkerCb}
+          {polyLineCb}
+        </MapView>
+        <Animated.View
+          style={[
+            {
+              position: "absolute",
+              right: 20,
+              bottom: 30,
+              zIndex: 999,
+              flexDirection: "row",
+              gap: 10,
+            },
+            floatingStyle,
+          ]}
+        >
+          <TouchableOpacity
+            style={{
+              backgroundColor: "#fff",
+              borderRadius: "50%",
+              padding: 10,
+              alignSelf: "flex-end",
+            }}
+            onPress={() =>
+              navigation.navigate("CarNavigation", { steps: steps })
+            }
+          >
+            <Ionicons
+              name="navigate-outline"
+              size={22}
+              color={"#000"}
+              style={{}}
+            ></Ionicons>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{
+              backgroundColor: "#fff",
+              borderRadius: "50%",
+              padding: 10,
+              alignSelf: "flex-end",
+            }}
+            onPress={recentreCurrentLocation}
+          >
+            <Ionicons
+              name="locate-outline"
+              size={22}
+              color={"#000"}
+              style={{}}
+            ></Ionicons>
+          </TouchableOpacity>
+          {status && !["REQUESTED"].includes(status) && (
+            <TouchableOpacity
+              style={{
+                backgroundColor: "#fff",
+                borderRadius: "50%",
+                padding: 10,
+                alignSelf: "flex-end",
+              }}
+              onPress={() => {
+                setBottomView("CHAT");
+                setClosablePan(true);
+                sheetRef.current?.expand();
+              }}
+            >
+              <Ionicons name="chatbubbles-outline" size={22}></Ionicons>
+            </TouchableOpacity>
+          )}
+        </Animated.View>
+      </View>
+      <BottomPanel
+        enablePanClose={closablePan}
+        ref={sheetRef}
+        onPositionChange={(height) => {
+          sheetY.set(height + 50);
+        }}
+        onClose={setDefault}
+      >
+        {bottomView === "DEFAULT" && (
+          <View>
+            <View style={commonStyles.row}>
+              {status && (
+                <Text style={{ fontSize: 22, marginBottom: 5 }}>
+                  Status: {status} - {id}
+                </Text>
+              )}
+            </View>
+
+            <View style={commonStyles.column}>
+              {status === "ASSIGNED" && localPolyline?.length > 0 && (
+                <TouchableOpacity
+                  style={commonStyles.button}
+                  onPress={() => {
+                    handleToPickup("ARRIVED");
+                  }}
+                >
+                  <Text style={commonStyles.buttonText}>Reached Pickup</Text>
+                </TouchableOpacity>
+              )}
+              {status === "ARRIVED" && (
+                <TouchableOpacity
+                  style={[commonStyles.button, { backgroundColor: "green" }]}
+                  onPress={() => {
+                    handleStart();
+                  }}
+                >
+                  <Text style={commonStyles.buttonText}>Start Ride</Text>
+                </TouchableOpacity>
+              )}
+              {status === "ONGOING" && (
+                <TouchableOpacity
+                  style={[commonStyles.button, { backgroundColor: "red" }]}
+                  onPress={() => {
+                    handleComplete();
+                  }}
+                >
+                  <Text style={commonStyles.buttonText}>Complete Ride</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        )}
+        {bottomView === "CHAT" && <ChatScreen></ChatScreen>}
+      </BottomPanel>
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", alignItems: "center" },
-  button: {
-    alignItems: "center",
-    backgroundColor: "#DDDDDD",
-    padding: 10,
-  },
-});

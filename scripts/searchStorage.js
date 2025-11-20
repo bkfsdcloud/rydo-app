@@ -1,6 +1,6 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const SEARCH_KEY = 'recent_searches';
+const SEARCH_KEY = "recent_searches";
 
 export const saveSearch = async (term) => {
   try {
@@ -8,7 +8,7 @@ export const saveSearch = async (term) => {
     let searches = existing ? JSON.parse(existing) : [];
 
     // remove duplicates
-    searches = searches.filter(item => item.place_id !== term.place_id);
+    searches = searches.filter((item) => item.place_id !== term.place_id);
     // add new term at the beginning
     searches.unshift(term);
     // limit to 5 recent searches
@@ -16,16 +16,17 @@ export const saveSearch = async (term) => {
 
     await AsyncStorage.setItem(SEARCH_KEY, JSON.stringify(searches));
   } catch (e) {
-    console.error('Error saving search:', e);
+    console.error("Error saving search:", e);
   }
 };
 
-export const getRecentSearches = async () => {
+export const getRecentSearches = async (search) => {
   try {
-    const existing = await AsyncStorage.getItem(SEARCH_KEY);
-    return existing ? JSON.parse(existing) : [];
+    let existing = await AsyncStorage.getItem(SEARCH_KEY);
+    existing = existing ? JSON.parse(existing) : [];
+    return existing;
   } catch (e) {
-    console.error('Error getting searches:', e);
+    console.error("Error getting searches:", e);
     return [];
   }
 };

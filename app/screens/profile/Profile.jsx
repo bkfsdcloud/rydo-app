@@ -18,7 +18,7 @@ export default function Profile() {
   const menuItems = [
     {
       id: "1",
-      title: "Profile Details",
+      title: "Profile",
       icon: "person-outline",
       route: "ProfileDetails",
     },
@@ -30,7 +30,7 @@ export default function Profile() {
       icon: "notifications-outline",
       route: "Notifications",
     },
-    { id: "5", title: "Favorites", icon: "heart-outline", route: "Favorites" },
+    // { id: "5", title: "Favorites", icon: "heart-outline", route: "Favorites" },
   ];
 
   const handleItemPress = (route) => {

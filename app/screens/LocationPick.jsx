@@ -6,19 +6,23 @@ import {
 import { commonStyles, ORIGIN } from "@/scripts/constants";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { useContext, useEffect, useRef, useState } from "react";
 import {
-  FlatList,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import MapView from "react-native-maps";
-import { getRecentSearches } from "../../scripts/searchStorage";
+import { allFavourites, markFavourite } from "../../scripts/api/miscApi";
+import BottomPanel from "../component/BottomPanel";
+import LocationInput from "../component/LocationInput";
+import SuggestionList from "../component/SuggestionList";
 import LocationContext from "../context/LocationContext";
 import { useRideStore } from "../store/useRideStore";
+import useUserStore from "../store/useUserStore";
 
 export default function LocationPick() {
   const navigation = useNavigation();
@@ -35,194 +39,217 @@ export default function LocationPick() {
   const [searchFor] = useState(route?.params?.searchFor || null);
   const mapRef = useRef(null);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [recent, setRecent] = useState([]);
+
+  const [refObj, setRefObj] = useState(null);
+  const [bottomView, setBottomView] = useState("DEFAULT");
+  const favNameRef = useRef(null);
+  const sheetRef = useRef(null);
+  const { setFavourites } = useUserStore();
 
   useEffect(() => {
-    loadSearches();
+    return () => clearTimeout(locationDebounce.current);
   }, []);
 
-  const loadSearches = async () => {
-    const data = await getRecentSearches();
-    setRecent(data);
-  };
+  const region = useMemo(
+    () => ({
+      latitude: location.lat,
+      longitude: location.lng,
+      latitudeDelta: 0.003,
+      longitudeDelta: 0.003,
+    }),
+    []
+  );
+
+  const recentreCurrentLocation = useCallback(() => {
+    mapRef.current?.animateToRegion({
+      latitude: location.lat,
+      longitude: location.lng,
+      latitudeDelta: 0.003,
+      longitudeDelta: 0.003,
+    });
+  }, []);
 
   async function updateMapLocation(newLocation) {
     const newCoords = {
-      lat: newLocation?.latitude || location.latitude,
-      lng: newLocation?.longitude || location.longitude,
+      lat: newLocation?.latitude || location.lat,
+      lng: newLocation?.longitude || location.lng,
     };
     const response = await getAddress(newCoords);
     setLocation(searchFor, { ...response, coords: newCoords });
   }
 
+  const onSearch = useCallback(async (text) => {
+    setShowSuggestionDropdown(false);
+
+    if (!text) {
+      setSuggestions([]);
+      return;
+    }
+    try {
+      const res = await handleAutocomplete({
+        input: text,
+      });
+      setSuggestions(res || []);
+      setShowSuggestionDropdown(true);
+    } catch {
+      setSuggestions([]);
+      setShowSuggestionDropdown(false);
+    }
+  }, []);
+
+  const handleSelectRecent = async (item) => {
+    setShowSuggestionDropdown(false);
+
+    const coords = await getCoords({ placeId: item.place_id });
+    setLocation(searchFor, { ...item, coords });
+
+    setIsAnimating(true);
+    mapRef.current?.animateToRegion({
+      latitude: coords.lat,
+      longitude: coords.lng,
+      latitudeDelta: 0.003,
+      longitudeDelta: 0.003,
+    });
+    setTimeout(() => setIsAnimating(false), 1000);
+    searchBox.current.clear();
+  };
+
+  const addFavourite = (data) => {
+    const favObjData = data
+      ? data
+      : searchFor === ORIGIN
+      ? origin
+      : destination;
+    setRefObj(favObjData);
+    setBottomView("FAV");
+    sheetRef.current?.expand();
+  };
+
   return (
     <View style={styles.container}>
-      <MapView
-        ref={mapRef}
-        paddingAdjustmentBehavior="automatic"
-        style={styles.map}
-        initialRegion={{
-          latitude: location.latitude,
-          longitude: location.longitude,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        }}
-        onMapReady={() => {
-          updateMapLocation();
-        }}
-        onRegionChangeComplete={async (newRegion) => {
-          if (!isAnimating) updateMapLocation(newRegion);
-        }}
-      ></MapView>
-      <View style={styles.markerFixed}>
-        <Ionicons name="location-sharp" size={40} color="#E53935" />
-      </View>
-      <View style={styles.overlayContainer}>
-        <TextInput
+      <View style={{ padding: 10, backgroundColor: "#fff" }}>
+        <LocationInput
           ref={searchBox}
-          autoCorrect={false}
-          autoCapitalize="none"
-          spellCheck={false}
-          autoFocus={false}
-          clearButtonMode="while-editing"
+          placeholder="Search Address"
           onChangeText={(text) => {
-            setShowSuggestionDropdown(false);
+            searchBox.current.value = text;
             if (locationDebounce.current)
               clearTimeout(locationDebounce.current);
-            locationDebounce.current = setTimeout(async () => {
-              if (!text) return;
-              try {
-                const res = await handleAutocomplete({
-                  input: text,
-                });
-                setSuggestions(res || []);
-                setShowSuggestionDropdown(true);
-              } catch {
-                setSuggestions([]);
-                setShowSuggestionDropdown(false);
-              }
-            }, 1000); // 500ms debounce
+            locationDebounce.current = setTimeout(() => {
+              onSearch(text);
+            }, 1000);
           }}
-          placeholder="Search Address"
-          placeholderTextColor={"grey"}
-          style={styles.input}
+          iconColor={searchFor === ORIGIN ? "green" : "red"}
+          style={{ backgroundColor: "#f0f0f0ff" }}
+          placeholderTextColor={"black"}
         />
         {showSuggestionDropdown && (
-          <FlatList
-            data={suggestions}
-            keyExtractor={(item) => item.place_id}
-            style={styles.dropdown}
-            keyboardShouldPersistTaps="handled"
-            renderItem={({ item }) => (
-              <View style={styles.dropdownPanel}>
-                <Ionicons
-                  name="location-outline"
-                  size={20}
-                  style={styles.dropdownIcon}
-                  color="#666"
-                />
-                <TouchableOpacity
-                  onPress={async () => {
-                    setShowSuggestionDropdown(false);
-
-                    const coords = await getCoords({ placeId: item.place_id });
-                    setLocation(searchFor, { ...item, coords });
-
-                    setIsAnimating(true);
-                    mapRef.current?.animateToRegion({
-                      latitude: coords.lat,
-                      longitude: coords.lng,
-                      latitudeDelta: 0.05,
-                      longitudeDelta: 0.05,
-                    });
-                    setTimeout(() => setIsAnimating(false), 1000);
-
-                    searchBox.current.clear();
-                  }}
-                  style={styles.item}
-                >
-                  <Text numberOfLines={1} style={{ fontSize: 14 }}>
-                    {item.description}
-                  </Text>
-                  <Text
-                    ellipsizeMode="tail"
-                    numberOfLines={1}
-                    style={{ fontSize: 12 }}
-                  >
-                    {item.secondaryText}
-                  </Text>
-                </TouchableOpacity>
-                <Ionicons
-                  name="heart-outline"
-                  size={20}
-                  style={styles.dropdownIcon}
-                  color="#666"
-                />
-              </View>
-            )}
+          <SuggestionList
+            search={searchBox.current?.value}
+            suggestions={suggestions}
+            showSuggestionDropdown={showSuggestionDropdown}
+            setShowSuggestionDropdown={setShowSuggestionDropdown}
+            handleSelectRecent={handleSelectRecent}
+            onAddFavourite={addFavourite}
           />
         )}
       </View>
-      <View>
-        <Text style={styles.title}>Recently Used</Text>
-        <FlatList
-          data={recent}
-          keyExtractor={(item) => item.place_id}
-          style={commonStyles.dropdownRecent}
-          keyboardShouldPersistTaps="handled"
-          renderItem={({ item }) => (
-            <View style={commonStyles.dropdownPanelRecent}>
-              <Ionicons
-                name="location"
-                size={20}
-                style={styles.dropdownIcon}
-                color="#666"
-              />
-              <TouchableOpacity
-                onPress={async () => {
-                  const coords = await getCoords({ placeId: item.place_id });
-
-                  setLocation(searchFor, { ...item, coords });
-                  navigation.navigate({
-                    name: "RiderHome",
-                  });
-                }}
-                style={styles.item}
-              >
-                <Text numberOfLines={1} style={styles.subtitle}>
-                  {item.description}
-                </Text>
-                <Text
-                  ellipsizeMode="tail"
-                  numberOfLines={1}
-                  style={{ fontSize: 12 }}
-                ></Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        />
-      </View>
-      <View style={styles.bottomCard}>
-        <TextInput
-          value={
-            searchFor === ORIGIN ? origin.description : destination.description
-          }
-          placeholder="Enter Origin"
-          style={styles.input}
-          placeholderTextColor={"grey"}
-          editable={false}
-        />
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => {
-            navigation.navigate({
-              name: "RiderHome",
-            });
+      <View style={[styles.container]}>
+        <MapView
+          ref={mapRef}
+          paddingAdjustmentBehavior="automatic"
+          provider="google"
+          showsMyLocationButton={false}
+          style={styles.map}
+          region={region}
+          onRegionChangeComplete={async (newRegion) => {
+            if (!isAnimating) updateMapLocation(newRegion);
           }}
+        ></MapView>
+        <View style={commonStyles.markerFixed}>
+          <Ionicons name="pin-outline" size={40} color="#E53935" />
+        </View>
+        <TouchableOpacity
+          style={{
+            backgroundColor: "#fff",
+            borderRadius: "50%",
+            position: "absolute",
+            padding: 8,
+            bottom: 180,
+            right: 10,
+            alignSelf: "flex-end",
+          }}
+          onPress={recentreCurrentLocation}
         >
-          <Text style={styles.buttonText}>Confirm location</Text>
+          <Ionicons
+            name="locate-outline"
+            size={22}
+            color={"#000"}
+            style={{}}
+          ></Ionicons>
         </TouchableOpacity>
       </View>
+
+      <BottomPanel>
+        {bottomView === "DEFAULT" && (
+          <View style={[commonStyles.column]}>
+            <LocationInput
+              value={
+                searchFor === ORIGIN
+                  ? `${origin.description} ${origin.secondaryText}`
+                  : `${destination.description} ${destination.secondaryText}`
+              }
+              placeholder="Enter Origin"
+              showIcon={false}
+              placeholderTextColor={"grey"}
+              favIcon={true}
+            />
+            <TouchableOpacity
+              style={commonStyles.button}
+              onPress={() => {
+                navigation.replace("RiderHome");
+              }}
+            >
+              <Text style={commonStyles.buttonText}>Confirm location</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {bottomView === "FAV" && (
+          <View style={commonStyles.column}>
+            <LocationInput
+              showIcon={false}
+              placeholder="Name"
+              placeholderTextColor={"grey"}
+              ref={favNameRef}
+              onChangeText={(text) => {
+                favNameRef.current.value = text;
+              }}
+              onAddFavourite={addFavourite}
+            />
+
+            <TouchableOpacity
+              style={commonStyles.button}
+              onPress={async () => {
+                await markFavourite({
+                  placeId: refObj?.place_id,
+                  description: refObj?.description,
+                  secondaryText: refObj?.secondaryText,
+                  name: favNameRef.current.value,
+                  latitude: refObj?.coords.lat,
+                  longitude: refObj?.coords.lng,
+                });
+                setRefObj(null);
+                setBottomView("DEFAULT");
+                sheetRef.current?.expand();
+                const resp = await allFavourites();
+                setFavourites(resp.data);
+              }}
+            >
+              <Text style={commonStyles.buttonText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </BottomPanel>
     </View>
   );
 }

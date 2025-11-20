@@ -1,20 +1,44 @@
-import { LocationContext } from "@/app/context/LocationContext";
+import BottomPanel from "@/app/component/BottomPanel";
+import RatingComponent from "@/app/component/RatingComponent";
+import { useAlert } from "@/app/context/AlertContext";
+import LocationContext from "@/app/context/LocationContext";
+import SocketContext from "@/app/context/SocketContext";
 import { handleGetRoute } from "@/scripts/api/geoApi";
 import { activeRide, available, createRide } from "@/scripts/api/riderApi";
 import { commonStyles } from "@/scripts/constants";
 import { Ionicons } from "@expo/vector-icons";
 import polylineTool from "@mapbox/polyline";
-import { useContext, useEffect, useRef, useState } from "react";
+import { useNavigation } from "@react-navigation/native";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
+import RideSummaryModal from "../../screens/rider/RideSummaryModal";
 import { useRideStore } from "../../store/useRideStore";
-import RideSummaryModal from "./RideSummaryModal";
+import ChatScreen from "../profile/ChatScreen";
 
-export default function RideBooking({ navigation }) {
+export default function RideBooking() {
   const { location } = useContext(LocationContext);
+  const navigation = useNavigation();
+  const { addListener, removeListener } = useContext(SocketContext);
 
   const {
+    id,
+    setId,
     origin,
+    status,
+    setStatus,
     destination,
     setDistance,
     setDuration,
@@ -27,59 +51,100 @@ export default function RideBooking({ navigation }) {
     transportMode,
     setTransportMode,
     category,
-    setCategory,
     paymentMethod,
-    setPaymentMethod,
+    setPolyline,
+    resetRide,
   } = useRideStore();
-
-  const [polyline, setPolyline] = useState([]);
-
-  const [showModal, setShowModal] = useState(false);
-  const [rideData, setRideData] = useState(null);
+  const [localPolyline, setLocalPolyline] = useState([]);
 
   const mapRef = useRef(null);
+  const sheetRef = useRef(null);
+  const [closablePan, setClosablePan] = useState(false);
+  const [bottomView, setBottomView] = useState("DEFAULT");
+
+  const sheetY = useSharedValue(0);
+  const floatingStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        {
+          translateY: withTiming(-sheetY.get() - 30),
+        },
+      ],
+    };
+  });
+
+  const { showAlert, hideAlert } = useAlert();
+
+  const setDefault = () => {
+    setBottomView("DEFAULT");
+    setClosablePan(false);
+    sheetRef.current?.expand();
+  };
 
   useEffect(() => {
-    handleRoute();
+    if (id > 0 && !localPolyline?.length) {
+      handleRoute();
+    }
+  }, [id, localPolyline]);
+
+  useEffect(() => {
+    addListener(handleMessage);
+    return () => {
+      removeListener(handleMessage);
+    };
   }, []);
 
+  const handleMessage = (parsed) => {
+    if (parsed?.event === "sendMessage") return;
+    console.log("📨 Notification from the driver:", parsed);
+    if (parsed?.data) {
+      setId(parsed?.data?.id);
+      setStatus(parsed?.data?.status);
+      Alert.alert("Information", parsed?.message);
+      if (parsed?.data?.status === "COMPLETED") {
+        setBottomView("RATE");
+        setClosablePan(true);
+        sheetRef.current?.expand();
+      }
+    } else {
+      // resetRide();
+      Alert.alert("Information", parsed?.message);
+    }
+  };
+
   useEffect(() => {
-    if (mapRef.current && polyline.length > 0) {
-      mapRef.current.fitToCoordinates(polyline, {
+    if (mapRef.current && localPolyline?.length > 0) {
+      mapRef.current.fitToCoordinates(localPolyline, {
         edgePadding: { top: 80, right: 80, bottom: 80, left: 80 },
         animated: true,
       });
     }
-  }, [polyline]);
+  }, [localPolyline]);
 
   const handleRoute = async () => {
-    if (!origin.place_id || !destination.place_id) return;
+    if (!origin.coords || !destination.coords) return;
     const res = await handleGetRoute({
-      origin: "place_id:" + origin.place_id,
-      destination: "place_id:" + destination.place_id,
+      origin: `${origin.coords.lat},${origin.coords.lng}`,
+      destination: `${destination.coords.lat},${destination.coords.lng}`,
     });
 
     const coordinates = [];
-    for (let step of res.overview_polyline) {
-      const stepPoints = polylineTool.decode(step.polyline.points);
+    for (let step of res.steps) {
+      const stepPoints = polylineTool.decode(step.polyline?.points);
       stepPoints.forEach(([lat, lng]) =>
         coordinates.push({ latitude: lat, longitude: lng })
       );
     }
-    setPolyline(coordinates);
+    setLocalPolyline(coordinates);
     setFares(res.fares);
     setDistance(res.distance);
     setDuration(res.duration);
     setDistanceKm(res.distanceKm);
     setDurationMin(res.durationMin);
     setTransportMode("Car");
-    setCategory("standard");
-    setPaymentMethod("Cash");
-    setTimeout(() => setShowModal(true), 500);
   };
 
   const handleBookRide = async () => {
-    setShowModal(false);
     const body = {
       fareEstimated: fare,
       pickupLat: origin.coords.lat,
@@ -94,65 +159,90 @@ export default function RideBooking({ navigation }) {
       category,
       paymentMethod,
     };
-    console.log("body: ", body);
     const res = await createRide(body);
-    Alert.alert("Ride Created", res.data);
+    setId(res.data?.id);
+    setStatus(res.data?.status);
+    Alert.alert("Ride Created", res.message);
   };
+
+  const originMarkerCb = useMemo(() => {
+    if (!origin.coords && !location) return null;
+    return (
+      <Marker
+        anchor={{ x: 0.5, y: 0.5 }}
+        pinColor="green"
+        coordinate={{
+          latitude: origin.coords.lat || location.lat,
+          longitude: origin.coords.lng || location.lng,
+        }}
+        title={origin.description}
+      >
+        <Ionicons
+          name="radio-button-on-outline"
+          size={20}
+          color={"green"}
+        ></Ionicons>
+      </Marker>
+    );
+  }, [origin.coords, origin.description, location]);
+
+  const destMarkerCb = useMemo(() => {
+    if (!destination.coords) return null;
+    return (
+      <Marker
+        pinColor="red"
+        anchor={{ x: 0.5, y: 0.5 }}
+        coordinate={{
+          latitude: destination.coords?.lat,
+          longitude: destination.coords?.lng,
+        }}
+        title={destination.description}
+      >
+        <Ionicons
+          name="radio-button-on-outline"
+          size={20}
+          color={"red"}
+        ></Ionicons>
+      </Marker>
+    );
+  }, [destination.coords, destination.description]);
+
+  const polyLineCb = useMemo(() => {
+    if (!localPolyline?.length) return null;
+
+    return (
+      <Polyline
+        coordinates={localPolyline}
+        strokeWidth={5}
+        strokeColor="blue"
+        geodesic={true}
+      />
+    );
+  }, [localPolyline]);
+
+  const regions = useMemo(
+    () => ({
+      latitude: (origin.coords && origin.coords?.lat) || location.lat,
+      longitude: (origin.coords && origin.coords?.lng) || location.lng,
+      latitudeDelta: 0.003,
+      longitudeDelta: 0.003,
+    }),
+    [origin.coords]
+  );
+
+  const handleShowAlert = useCallback((options) => {
+    showAlert(options);
+  }, []);
+  const handleHideAlert = useCallback(() => hideAlert(), []);
 
   return (
     <View style={styles.container}>
-      <MapView
-        ref={mapRef}
-        paddingAdjustmentBehavior="automatic"
-        style={styles.map}
-        region={{
-          latitude: origin.coords.lat || location.latitude,
-          longitude: origin.coords.lng || location.longitude,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        }}
-      >
-        <Marker
-          anchor={{ x: 0.5, y: 0.5 }}
-          pinColor="green"
-          icon={
-            <Ionicons name="pin-outline" size={20} color={"green"}></Ionicons>
-          }
-          coordinate={{
-            latitude: origin.coords.lat,
-            longitude: origin.coords.lng,
-          }}
-          title={origin.description}
-        />
-        <Marker
-          pinColor="red"
-          icon={
-            <Ionicons name="pin-outline" size={20} color={"red"}></Ionicons>
-          }
-          anchor={{ x: 0.5, y: 0.5 }}
-          coordinate={{
-            latitude: destination.coords.lat,
-            longitude: destination.coords.lng,
-          }}
-          title={destination.description}
-        />
-        {polyline.length > 0 && (
-          <Polyline
-            coordinates={polyline}
-            strokeWidth={5}
-            strokeColor="blue"
-            geodesic={true}
-          />
-        )}
-      </MapView>
       <View style={commonStyles.overlayContainer}>
-        <Text style={{ fontSize: 22, color: "#fff" }}>
-          Status: {rideData?.status}
-        </Text>
         <TouchableOpacity
           style={commonStyles.overlayIcon}
           onPress={() => {
-            navigation.goBack();
+            setPolyline([]);
+            navigation.replace("RiderHome");
           }}
         >
           <Ionicons
@@ -166,7 +256,13 @@ export default function RideBooking({ navigation }) {
           style={commonStyles.overlayIcon}
           onPress={async () => {
             const res = await activeRide({});
-            setRideData(res.data);
+            if (res.data?.id > 0) {
+              setId(res.data?.id);
+              setStatus(res.data?.status || "");
+            } else {
+              resetRide();
+              navigation.replace("RiderHome");
+            }
           }}
         >
           <Ionicons
@@ -180,18 +276,13 @@ export default function RideBooking({ navigation }) {
           style={commonStyles.overlayIcon}
           onPress={async () => {
             const body = {
-              fareEstimated: fare,
-              pickupLat: origin.coords.lat,
-              pickupLng: origin.coords.lng,
-              dropLat: destination.coords.lat,
-              dropLng: destination.coords.lng,
-              distanceKm: distanceKm,
-              pickupLocation: origin.description,
-              dropLocation: destination.description,
-              duration: durationMin,
+              id: id,
+              radiusKm: 20,
             };
             const res = await available({ rideData: body });
-            console.log(res);
+            setStatus(res.data?.status);
+            setId(res.data?.id);
+            Alert.alert("Info", res.message);
           }}
         >
           <Ionicons
@@ -202,14 +293,83 @@ export default function RideBooking({ navigation }) {
           ></Ionicons>
         </TouchableOpacity>
       </View>
-
-      <View style={{}}>
-        <RideSummaryModal
-          visible={showModal}
-          onClose={() => setShowModal(false)}
-          onConfirm={handleBookRide}
-        />
+      <View style={styles.container}>
+        <MapView
+          ref={mapRef}
+          provider="google"
+          paddingAdjustmentBehavior="automatic"
+          style={styles.map}
+          region={regions}
+        >
+          {originMarkerCb}
+          {destMarkerCb}
+          {polyLineCb}
+        </MapView>
       </View>
+      <Animated.View
+        style={[
+          {
+            position: "absolute",
+            bottom: 20,
+            right: 10,
+            zIndex: 999,
+            flexDirection: "row",
+            gap: 10,
+          },
+          floatingStyle,
+        ]}
+      >
+        <View
+          style={{
+            flexDirection: "row",
+            gap: 10,
+          }}
+        >
+          {status && !["REQUESTED"].includes(status) && (
+            <TouchableOpacity
+              style={{
+                backgroundColor: "#fff",
+                borderRadius: "50%",
+                padding: 10,
+                alignSelf: "flex-end",
+              }}
+              onPress={() => {
+                setBottomView("CHAT");
+                setClosablePan(true);
+                sheetRef.current?.expand();
+              }}
+            >
+              <Ionicons name="chatbubbles-outline" size={22}></Ionicons>
+            </TouchableOpacity>
+          )}
+        </View>
+      </Animated.View>
+
+      <BottomPanel
+        enablePanClose={closablePan}
+        ref={sheetRef}
+        onPositionChange={(height) => {
+          sheetY.set(height + 50);
+        }}
+        onClose={setDefault}
+      >
+        {bottomView === "DEFAULT" && (
+          <View>
+            <Text style={{ fontSize: 22, color: "#000" }}>
+              Status: {status}
+            </Text>
+            <RideSummaryModal
+              onConfirm={handleBookRide}
+              handleShowAlert={handleShowAlert}
+              handleHideAlert={handleHideAlert}
+            />
+          </View>
+        )}
+        {bottomView === "CHAT" && <ChatScreen></ChatScreen>}
+        {bottomView === "RATE" && (
+          <RatingComponent onClose={setDefault}></RatingComponent>
+        )}
+      </BottomPanel>
     </View>
   );
 }

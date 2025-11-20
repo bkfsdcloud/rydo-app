@@ -4,7 +4,7 @@ import { ActivityIndicator, Modal, StyleSheet, View } from "react-native";
 import LoadingContext from "../context/LoadingContext";
 
 export default function LoadingModal() {
-  const { visible, message, button, callback } = useContext(LoadingContext);
+  const { visible } = useContext(LoadingContext);
 
   return (
     <Modal transparent visible={visible} animationType="fade">

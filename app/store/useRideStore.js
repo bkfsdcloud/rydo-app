@@ -1,11 +1,26 @@
 import { create } from "zustand";
 
 export const useRideStore = create((set) => ({
-  origin: { place_id: "", description: "", coords: {lat: '', lng: ''}, secondaryText: '' },
-  destination: { place_id: "", description: "", coords: {lat: '', lng: ''}, secondaryText: '' },
+  id: 0,
+  status: null,
+  driverId: 0,
+  riderId: 0,
+  polyline: null,
+  origin: {
+    place_id: "",
+    description: "",
+    coords: null,
+    secondaryText: "",
+  },
+  destination: {
+    place_id: "",
+    description: "",
+    coords: null,
+    secondaryText: "",
+  },
   fare: null,
   finalFare: null,
-  fares: {},
+  fares: { standard: "", premium: "", luxury: "", executive: "" },
   distance: null,
   duration: null,
   distanceKm: null,
@@ -14,11 +29,12 @@ export const useRideStore = create((set) => ({
   category: null,
   paymentMethod: null,
 
+  setStatus: (status) => set({ status }),
+  setDriverId: (driverId) => set({ driverId }),
+  setRiderId: (riderId) => set({ riderId }),
   setOrigin: (origin, options = { replace: false }) =>
     set((state) => ({
-      origin: options.replace
-        ? origin 
-        : { ...state.origin, ...origin },
+      origin: options.replace ? origin : { ...state.origin, ...origin },
     })),
 
   setDestination: (destination, options = { replace: false }) =>
@@ -27,6 +43,8 @@ export const useRideStore = create((set) => ({
         ? destination
         : { ...state.destination, ...destination },
     })),
+  setId: (id) => set({ id }),
+  setPolyline: (polyline) => set({ polyline }),
   setFare: (fare) => set({ fare }),
   setFinalFare: (finalFare) => set({ finalFare }),
   setFares: (fares) => set({ fares }),
@@ -46,16 +64,37 @@ export const useRideStore = create((set) => ({
 
   resetRide: () =>
     set({
-      origin: { place_id: "", description: "", coords: {lat: '', lng: ''}, secondaryText: '' },
-      destination: { place_id: "", description: "", coords: {lat: '', lng: ''}, secondaryText: '' },
+      id: 0,
+      status: null,
+      driverId: 0,
+      riderId: 0,
+      polyline: null,
+      origin: {
+        place_id: "",
+        description: "",
+        coords: null,
+        secondaryText: "",
+      },
+      destination: {
+        place_id: "",
+        description: "",
+        coords: null,
+        secondaryText: "",
+      },
       fare: null,
+      fares: { standard: "", premium: "", luxury: "", executive: "" },
       distance: null,
       vehicle: null,
       category: null,
       paymentMode: null,
     }),
-    resetDestination: () =>
+  resetDestination: () =>
     set({
-      destination: { place_id: "", description: "", coords: {lat: '', lng: ''}, secondaryText: '' }
+      destination: {
+        place_id: "",
+        description: "",
+        coords: null,
+        secondaryText: "",
+      },
     }),
 }));
