@@ -90,7 +90,6 @@ export default function RideSummaryModal({ onShowBottomPanel }) {
   ]);
 
   const handleSelectCategory = useCallback((item, value) => {
-    console.log("Item, Value", item, value);
     setCategory(item);
     setFare(value?.fare);
     setCommissionAmount(value?.commissionAmount);
@@ -179,15 +178,14 @@ export default function RideSummaryModal({ onShowBottomPanel }) {
           <Text style={commonStyles.buttonText}>Book Ride</Text>
         </TouchableButton>
       )}
-      {id > 0 &&
-        ["REQUESTED", "PENDING", "ASSIGNED", "ACCEPTED"].includes(status) && (
-          <TouchableButton
-            style={[commonStyles.button]}
-            onPress={() => setShowCancelTab(true)}
-          >
-            <Text style={[commonStyles.buttonText]}>Cancel Ride</Text>
-          </TouchableButton>
-        )}
+      {id > 0 && ["ASSIGNED", "ACCEPTED"].includes(status) && (
+        <TouchableButton
+          style={[commonStyles.button]}
+          onPress={() => setShowCancelTab(true)}
+        >
+          <Text style={[commonStyles.buttonText]}>Cancel Ride</Text>
+        </TouchableButton>
+      )}
     </View>
   );
 }

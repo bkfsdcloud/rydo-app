@@ -1,9 +1,14 @@
 // components/LoadingModal.js
+import { useEffect } from "react";
 import { ActivityIndicator, Modal, StyleSheet, View } from "react-native";
 import { useLoading } from "../context/LoadingContext";
 
 export default function LoadingModal() {
   const { loadingCount } = useLoading();
+
+  useEffect(() => {
+    console.log("loadingCount now :", loadingCount);
+  }, [loadingCount]);
 
   return (
     <Modal transparent visible={loadingCount > 0} animationType="fade">

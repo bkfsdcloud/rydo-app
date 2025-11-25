@@ -2,6 +2,7 @@ import CancelComponent from "@/app/component/CancelComponent";
 import RatingComponent from "@/app/component/RatingComponent";
 
 import { useAlert } from "@/app/context/AlertContext";
+import AuthContext from "@/app/context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import polylineTool from "@mapbox/polyline";
 import { useNavigation } from "@react-navigation/native";
@@ -31,6 +32,7 @@ import ChatScreen from "../profile/ChatScreen";
 
 export default function DriverHome() {
   const { location } = useContext(LocationContext);
+  const { user } = useContext(AuthContext);
   const { sendMessage, addListener, removeListener } =
     useContext(SocketContext);
 
@@ -58,7 +60,7 @@ export default function DriverHome() {
     setDriverId,
   } = useRideStore();
 
-  const [dutyStatus, setDutyStatus] = useState("AVAILABLE");
+  const [dutyStatus, setDutyStatus] = useState("ACTIVE");
   const mapRef = useRef(null);
   const [localPolyline, setLocalPolyline] = useState([]);
   const [steps, setSteps] = useState([]);
@@ -68,7 +70,9 @@ export default function DriverHome() {
   const sheetRef = useRef(null);
   const [closablePan, setClosablePan] = useState(false);
   const [bottomView, setBottomView] = useState("DEFAULT");
+  const [panelTitle, setPanelTitle] = useState("");
 
+  const statusRef = useRef(null);
   const tempLocation = useRef(null);
   const originRef = useRef(null);
   const destinationRef = useRef(null);
@@ -85,6 +89,7 @@ export default function DriverHome() {
   });
 
   useEffect(() => {
+    if (statusRef.current) return;
     if (status === "PENDING") {
       showAlert({
         title: "Ride Request!",
@@ -102,11 +107,13 @@ export default function DriverHome() {
       tempLocation.current = null;
       handleRoute(status);
     }
-  }, []);
+    statusRef.current = status;
+  }, [status]);
 
   const setDefault = () => {
     setBottomView("DEFAULT");
     setClosablePan(false);
+    setPanelTitle("");
     sheetRef.current?.expand();
   };
 
@@ -120,6 +127,8 @@ export default function DriverHome() {
         setStatus(res?.data.status);
         setRoutePositions(rideInfo);
         handleRoute(res?.data.status);
+      } else if (res?.message) {
+        Alert.alert("Info", res?.message);
       }
     },
     [id, origin, destination]
@@ -226,15 +235,11 @@ export default function DriverHome() {
       });
     } else {
       resetRide();
-      Alert.alert("Information", parsed?.message);
+      Alert.alert("Info", parsed?.message);
     }
   };
 
   const handleRoute = async (status) => {
-    console.log("status: ", status);
-    console.log("tempLocation: ", tempLocation.current);
-    console.log("origin: ", originRef.current);
-    console.log("destination: ", destinationRef.current);
     const res = await handleGetRoute({
       origin: tempLocation.current
         ? `${tempLocation.current?.coords?.lat},${tempLocation.current?.coords?.lng}`
@@ -353,8 +358,8 @@ export default function DriverHome() {
             lng: newRegion.longitude,
           },
           details: {
-            vehicleType: "car",
-            category: "standard",
+            vehicleType: user?.driver?.vehicle?.type,
+            category: user?.driver?.vehicle?.category,
           },
         });
         tempLocation.current = {
@@ -376,7 +381,7 @@ export default function DriverHome() {
   }, [location]);
 
   const toggleDuty = useCallback(() => {
-    const status = dutyStatus === "AVAILABLE" ? "INACTIVE" : "AVAILABLE";
+    const status = dutyStatus === "ACTIVE" ? "INACTIVE" : "ACTIVE";
     setDutyStatus(status);
     sendMessage({
       event: "onLocationUpdate",
@@ -411,7 +416,7 @@ export default function DriverHome() {
           disabled={status !== null}
         >
           <Ionicons
-            color={dutyStatus === "AVAILABLE" ? "green" : "red"}
+            color={dutyStatus === "ACTIVE" ? "green" : "red"}
             name="train"
             size={20}
             style={{ padding: 10 }}
@@ -503,6 +508,7 @@ export default function DriverHome() {
       <BottomPanel
         enablePanClose={closablePan}
         ref={sheetRef}
+        title={panelTitle}
         onPositionChange={(height) => {
           sheetY.set(height + 50);
         }}
@@ -521,7 +527,7 @@ export default function DriverHome() {
             <View style={commonStyles.column}>
               {status === "ASSIGNED" && localPolyline?.length > 0 && (
                 <TouchableOpacity
-                  style={commonStyles.button}
+                  style={[commonStyles.button, { backgroundColor: "green" }]}
                   onPress={() => {
                     handleToPickup("ARRIVED");
                   }}
@@ -557,13 +563,13 @@ export default function DriverHome() {
                     commonStyles.button,
                     {
                       backgroundColor:
-                        dutyStatus === "AVAILABLE" ? "grey" : "green",
+                        dutyStatus === "ACTIVE" ? "grey" : "green",
                     },
                   ]}
                   onPress={toggleDuty}
                 >
                   <Text style={commonStyles.buttonText}>
-                    {dutyStatus === "AVAILABLE" ? "Duty Off" : "Duty On"}
+                    {dutyStatus === "ACTIVE" ? "Duty Off" : "Duty On"}
                   </Text>
                 </TouchableOpacity>
               )}

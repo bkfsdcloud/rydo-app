@@ -32,6 +32,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+import SearchingModal from "../../component/SearchingModal";
 import RideSummaryModal from "../../screens/rider/RideSummaryModal";
 import { useRideStore } from "../../store/useRideStore";
 import ChatScreen from "../profile/ChatScreen";
@@ -137,6 +138,7 @@ export default function RideBooking() {
       if (parsed?.data?.status === "COMPLETED") {
         setBottomView("RATE");
         setClosablePan(true);
+        setPanelTitle("Rate Your Ride");
         sheetRef.current?.expand();
       }
     } else {
@@ -362,6 +364,10 @@ export default function RideBooking() {
         </View>
       </Animated.View>
 
+      <SearchingModal
+        visible={status === "PENDING" || status === "REQUESTED"}
+      ></SearchingModal>
+
       <BottomPanel
         enablePanClose={closablePan}
         title={panelTitle}
@@ -382,6 +388,7 @@ export default function RideBooking() {
                 setBottomView(view);
                 setPanelTitle("Payment Method");
               }}
+              onBooking={() => {}}
             />
           </View>
         )}

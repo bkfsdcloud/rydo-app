@@ -53,6 +53,7 @@ export const SocketProvider = ({ children }) => {
 
       // Driver registers initial location
       if (user?.role === "DRIVER") {
+        console.log("user: ", user);
         socket.send(
           JSON.stringify({
             event: "onLocationUpdate",
@@ -61,9 +62,9 @@ export const SocketProvider = ({ children }) => {
               lng: location.lng,
             },
             details: {
-              status: user?.driver?.available || "ACTIVE",
-              vehicleType: "car",
-              category: "standard",
+              status: user?.driver?.status || "ACTIVE",
+              vehicleType: user?.driver?.vehicle?.type,
+              category: user?.driver?.vehicle?.category,
             },
           })
         );

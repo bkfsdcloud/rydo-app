@@ -2,13 +2,14 @@ import TouchableButton from "@/app/component/TouchableButton";
 import AuthContext from "@/app/context/AuthContext";
 import { genOtp, verifyOtp } from "@/scripts/api/userApi";
 import { commonStyles } from "@/scripts/constants";
-import { useRoute } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
 
 const VerifyOtpScreen = () => {
   const route = useRoute();
   const { phone } = route.params;
+  const navigation = useNavigation();
 
   const [time, setTime] = useState(30);
   const timeValueRef = useRef(null);

@@ -56,9 +56,9 @@ export default function RatingComponent({
 
   return (
     <View style={{ padding: 10 }}>
-      <View style={{ paddingBottom: 10 }}>
+      {/* <View style={{ paddingBottom: 10 }}>
         <Text style={commonStyles.title}>Rate Your Ride</Text>
-      </View>
+      </View> */}
       {/* ⭐ Rating Selector */}
       <View style={{ flexDirection: "row", marginBottom: 10 }}>
         {[1, 2, 3, 4, 5].map((star) => (

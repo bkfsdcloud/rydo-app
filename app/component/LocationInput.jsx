@@ -9,7 +9,7 @@ export default function LocationInput({
   showIcon = true,
   favIcon = false,
   placeholder,
-  placeholderTextColor,
+  placeholderTextColor = "grey",
   value,
   editable,
   style,
