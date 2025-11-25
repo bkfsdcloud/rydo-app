@@ -1,22 +1,30 @@
-import AuthContext from "@/app/context/AuthContext";
 import { allTransactions } from "@/scripts/api/miscApi";
+import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { useContext, useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function Payments() {
-  const { user } = useContext(AuthContext);
   const navigation = useNavigation();
   const [wallet, setWallet] = useState({ balance: 0, transactions: [] });
 
-  const isDriver = user?.role === "DRIVER";
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchWallet();
   }, []);
 
   const fetchWallet = async () => {
-    const transactions = await allTransactions();
+    setLoading(true);
+    const transactions = await allTransactions({ skipGlobalLoader: true });
+    setLoading(false);
     if (transactions.data) {
       setWallet(transactions.data);
     } else {
@@ -34,7 +42,16 @@ export default function Payments() {
       >
         <View style={styles.cardLeft}>
           <View style={[styles.iconBg, { backgroundColor: "#ffe6e6" }]}>
-            <Text style={styles.icon}>💳</Text>
+            {loading && <ActivityIndicator size="small" color={"red"} />}
+            {!loading && (
+              <Text style={styles.icon}>
+                <Ionicons
+                  name={"wallet-outline"}
+                  size={20}
+                  color={"#f7312aff"}
+                />
+              </Text>
+            )}
           </View>
           <View style={styles.cardText}>
             <Text style={styles.cardTitle}>Wallet</Text>
@@ -50,8 +67,10 @@ export default function Payments() {
 
       <View style={styles.card}>
         <View style={styles.cardLeft}>
-          <View style={[styles.iconBg, { backgroundColor: "#fff8e1" }]}>
-            <Text style={styles.icon}>💵</Text>
+          <View style={[styles.iconBg, { backgroundColor: "#e8f5ff" }]}>
+            <Text style={styles.icon}>
+              <Ionicons name={"cash-outline"} size={20} color={"orange"} />
+            </Text>
           </View>
           <View style={styles.cardText}>
             <Text style={styles.cardTitle}>Cash</Text>
@@ -62,7 +81,9 @@ export default function Payments() {
       <View style={styles.card}>
         <View style={styles.cardLeft}>
           <View style={[styles.iconBg, { backgroundColor: "#e8f5ff" }]}>
-            <Text style={styles.icon}>🏦</Text>
+            <Text style={styles.icon}>
+              <Ionicons name={"qr-code-outline"} size={20} color={"orange"} />
+            </Text>
           </View>
           <View style={styles.cardText}>
             <Text style={styles.cardTitle}>UPI</Text>

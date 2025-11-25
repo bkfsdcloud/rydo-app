@@ -1,10 +1,9 @@
 import { StyleSheet, Text, View } from "react-native";
 
 export default function Notifications({ navigation }) {
-  
   return (
     <View style={styles.container}>
-        <Text> Notification details </Text>
+      <Text> Notification details </Text>
     </View>
   );
 }
@@ -22,5 +21,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 5,
     elevation: 2,
-  }
+  },
 });

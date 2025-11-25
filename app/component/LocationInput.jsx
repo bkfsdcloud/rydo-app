@@ -21,12 +21,14 @@ export default function LocationInput({
   searchFor,
   onAddFavourite,
 }) {
-  const { favourites, setFavourites } = useUserStore();
+  const { favourites } = useUserStore();
   const { origin, destination } = useRideStore();
   const [isFav, setIsFav] = useState(false);
 
   const getStyleClass = useCallback(() => {
-    if (showIcon) {
+    if (showIcon && favIcon) {
+      return [styles.inputIcon, styles.favInput];
+    } else if (showIcon) {
       return styles.inputIcon;
     } else if (favIcon) {
       return styles.favInput;

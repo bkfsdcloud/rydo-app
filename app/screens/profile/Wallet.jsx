@@ -23,6 +23,7 @@ export default function Wallet() {
   const [amount, setAmount] = useState(100);
   const [method, setMethod] = useState("CASH");
   const [loading, setLoading] = useState(false);
+  const [showAmountBox, setShowAmountBox] = useState(false);
 
   const open = () => sheetRef.current?.expand();
   const close = () => sheetRef.current?.close();
@@ -32,11 +33,12 @@ export default function Wallet() {
       return Alert.alert("Enter valid amount");
     }
 
+    setShowAmountBox(false);
     setLoading(true);
     try {
       const res = await makeTransaction({
         amount: parseFloat(amount),
-        type: "CREDIT",
+        type: "RECHARGE",
         paymentMethod: method,
       });
 
@@ -75,6 +77,11 @@ export default function Wallet() {
       onPress: () => navigation.navigate("PayFromWalletScreen"),
     },
   ];
+
+  const setRawAmount = (amount) => {
+    setShowAmountBox(false);
+    setAmount(amount);
+  };
 
   useEffect(() => {
     fetchWallet();
@@ -131,30 +138,13 @@ export default function Wallet() {
         index={-1}
         enablePanClose={true}
         onClose={close}
+        title={"Add Balance"}
       >
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 22, fontWeight: "bold", marginBottom: 20 }}>
-            Add Balance
-          </Text>
-
-          <TextInput
-            value={amount}
-            onChangeText={setAmount}
-            placeholder="Enter amount"
-            keyboardType="numeric"
-            style={{
-              borderWidth: 1,
-              borderColor: "#ccc",
-              padding: 10,
-              borderRadius: 8,
-              marginBottom: 20,
-            }}
-          />
-
           {/* Payment method selection */}
           <Text style={{ marginBottom: 10, fontSize: 16 }}>Amount:</Text>
           <View style={{ flexDirection: "row", marginBottom: 20 }}>
-            {/* {["UPI", "CASH"].map((m) => (
+            {["UPI", "CASH"].map((m) => (
               <TouchableOpacity
                 key={m}
                 onPress={() => setMethod(m)}
@@ -169,11 +159,29 @@ export default function Wallet() {
                   {m.toUpperCase()}
                 </Text>
               </TouchableOpacity>
-            ))} */}
+            ))}
+          </View>
+          {showAmountBox && (
+            <TextInput
+              value={amount}
+              onChangeText={setAmount}
+              placeholder="Enter amount"
+              keyboardType="number-pad"
+              returnKeyType="done"
+              style={{
+                borderWidth: 1,
+                borderColor: "#ccc",
+                padding: 10,
+                borderRadius: 8,
+                marginBottom: 20,
+              }}
+            />
+          )}
+          <View style={{ flexDirection: "row", marginBottom: 20 }}>
             {[100, 200, 500, 1000].map((m) => (
               <TouchableOpacity
                 key={m}
-                onPress={() => setAmount(m)}
+                onPress={() => setRawAmount(m)}
                 style={{
                   backgroundColor: amount === m ? "#007AFF" : "#eee",
                   padding: 12,
@@ -186,6 +194,22 @@ export default function Wallet() {
                 </Text>
               </TouchableOpacity>
             ))}
+            <TouchableOpacity
+              onPress={() => {
+                setShowAmountBox(true);
+                setAmount(0);
+              }}
+              style={{
+                backgroundColor: showAmountBox ? "#007AFF" : "#eee",
+                padding: 12,
+                borderRadius: 8,
+                marginRight: 10,
+              }}
+            >
+              <Text style={{ color: showAmountBox ? "#fff" : "#333" }}>
+                Other
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {/* Submit */}
@@ -243,7 +267,7 @@ const styles = StyleSheet.create({
   },
   yellowShape: {
     position: "absolute",
-    left: -20,
+    left: 0,
     top: -20,
     width: 120,
     height: 120,

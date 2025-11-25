@@ -42,6 +42,11 @@ export default function RiderStack() {
         component={RideBooking}
         options={{ title: "Ride Booking", headerShown: false }}
       />
+      {/* <Stack.Screen
+        name="ReviewBooking"
+        component={ReviewBooking}
+        options={{ title: "One Way Trip", headerShown: false }}
+      /> */}
     </Stack.Navigator>
   );
 }

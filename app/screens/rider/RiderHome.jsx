@@ -1,4 +1,5 @@
 import BottomPanel from "@/app/component/BottomPanel";
+import LocationInput from "@/app/component/LocationInput";
 import { LocationContext } from "@/app/context/LocationContext";
 import { getAddress } from "@/scripts/api/geoApi";
 import { available } from "@/scripts/api/riderApi";
@@ -13,21 +14,14 @@ import {
   useRef,
   useState,
 } from "react";
-import {
-  Image,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
-import LocationInput from "../../component/LocationInput";
+import TouchableButton from "../../component/TouchableButton";
 import { useRideStore } from "../../store/useRideStore";
 
 export default function MapScreen() {
@@ -36,19 +30,22 @@ export default function MapScreen() {
 
   const { id, origin, setOrigin, destination } = useRideStore();
 
+  const initialRef = useRef(false);
   const mapRef = useRef(null);
+
+  const [recentre, setRecentre] = useState(true);
   const [drivers, setDrivers] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [confirmLocation, setConfirmLocation] = useState(true);
 
   const sheetRef = useRef(null);
-  const [closablePan, setClosablePan] = useState(false);
-  const [bottomView, setBottomView] = useState("DEFAULT");
 
   const sheetY = useSharedValue(0);
   const floatingStyle = useAnimatedStyle(() => {
     return {
       transform: [
         {
-          translateY: withTiming(-sheetY.get() - 30),
+          translateY: withTiming(-sheetY.get() - 10),
         },
       ],
     };
@@ -61,15 +58,12 @@ export default function MapScreen() {
   // }, [id]);
 
   useEffect(() => {
-    // setDefault();
-    setAddress();
+    if (!initialRef.current) {
+      setAddress();
+      initialRef.current = true;
+    }
+    return () => (initialRef.current = false);
   }, []);
-
-  const setDefault = () => {
-    setBottomView("DEFAULT");
-    setClosablePan(false);
-    sheetRef.current?.expand();
-  };
 
   const setAddress = async () => {
     if (!origin?.coords) {
@@ -77,51 +71,59 @@ export default function MapScreen() {
       setOrigin({ ...response, coords: location });
     }
   };
-  async function updateMapLocation(newLocation) {
-    if (newLocation) {
-      const coords = {
-        lat: newLocation?.latitude || newLocation?.lat,
-        lng: newLocation?.longitude || newLocation?.lng,
-      };
-      const response = await getAddress(coords);
-      setOrigin({ ...response, coords });
-    }
-  }
+  const onRegionChangeCompleteCb = useCallback(
+    async (newRegion, isGesture) => {
+      if (id === 0 && isGesture) {
+        setRecentre(false);
+        // console.log("Region change", newRegion);
+        // setCurrentRegion(newRegion);
+        // setSearching(false);
+        updateMapLocation(newRegion);
+        // checkAvailableDrivers();
+      }
+    },
+    [id]
+  );
 
-  const checkAvailableDrivers = async () => {
+  const updateMapLocation = useCallback(async (newRegion) => {
+    const coords = {
+      lat: newRegion?.latitude || newRegion?.lat,
+      lng: newRegion?.longitude || newRegion?.lng,
+    };
+    const response = await getAddress(coords);
+    setOrigin({ ...response, coords });
+  }, []);
+
+  const checkAvailableDrivers = useCallback(async () => {
     const body = {
       latitude: origin.coords?.lat,
       longitude: origin.coords?.lng,
     };
     const res = await available(body);
     setDrivers(res.data || []);
-  };
-
-  const handleCheckAvailable = useCallback(() => {
-    checkAvailableDrivers();
-  }, [origin?.coords]);
+  }, [origin?.coords?.lat, origin?.coords?.lng]);
 
   const trimSpace = (value) => (value ? value.trim() : value);
 
   const driverMarkers = useMemo(
     () =>
-      drivers.map((key) => (
-        <Marker
-          key={key.driverId}
-          anchor={{ x: 0.5, y: 0.5 }}
-          coordinate={{
-            latitude: key.positions.latitude,
-            longitude: key.positions.longitude,
-          }}
-          title={key.distance}
-        >
-          <Image
-            source={require("@/assets/images/car-img.png")}
-            style={{ width: 40, height: 40 }}
-          />
-          <Ionicons name="car-outline" size={40} color="grey" />
-        </Marker>
-      )),
+      drivers
+        .filter((key) => key?.connectionId)
+        .map((key) => (
+          <Marker
+            key={key.driverId}
+            anchor={{ x: 0.5, y: 0.5 }}
+            coordinate={{
+              latitude: key.positions.lat,
+              longitude: key.positions.lng,
+            }}
+            title={key.distance}
+          >
+            <View style={{ justifyContent: "center", alignItems: "center" }}>
+              <Ionicons name="car-outline" size={40} color="red" />
+            </View>
+          </Marker>
+        )),
     [drivers]
   );
 
@@ -137,18 +139,19 @@ export default function MapScreen() {
 
   const recentreCurrentLocation = useCallback(() => {
     updateMapLocation(location);
+    setRecentre(true);
     mapRef.current?.animateToRegion({
       latitude: location.lat,
       longitude: location.lng,
       latitudeDelta: 0.003,
       longitudeDelta: 0.003,
     });
-  }, []);
+  }, [location.lat, location.lng]);
 
   return (
     <View style={styles.container}>
       <View style={commonStyles.overlayContainer}>
-        <TouchableOpacity
+        <TouchableButton
           style={commonStyles.overlayIcon}
           onPress={() => {
             navigation.toggleDrawer();
@@ -160,8 +163,8 @@ export default function MapScreen() {
             color={"#000"}
             style={{ padding: 10 }}
           ></Ionicons>
-        </TouchableOpacity>
-        <TouchableOpacity
+        </TouchableButton>
+        <TouchableButton
           style={commonStyles.overlayIcon}
           onPress={() => {
             navigation.navigate("Notifications");
@@ -173,7 +176,7 @@ export default function MapScreen() {
             color={"#000"}
             style={{ padding: 10 }}
           ></Ionicons>
-        </TouchableOpacity>
+        </TouchableButton>
       </View>
 
       <View style={styles.container}>
@@ -185,13 +188,10 @@ export default function MapScreen() {
           style={styles.map}
           showsUserLocation={true}
           region={regions}
-          onRegionChangeComplete={(newRegion, { isGesture }) => {
-            console.log("Region changed", isGesture);
-            if (id === 0 && isGesture) {
-              updateMapLocation(newRegion);
-            }
-            // checkAvailableDrivers();
-          }}
+          onRegionChangeStart={() => setRecentre(false)}
+          onRegionChangeComplete={(newRegion, { isGesture }) =>
+            onRegionChangeCompleteCb(newRegion, isGesture)
+          }
         >
           {driverMarkers}
         </MapView>
@@ -213,7 +213,7 @@ export default function MapScreen() {
             floatingStyle,
           ]}
         >
-          <TouchableOpacity
+          <TouchableButton
             style={{
               backgroundColor: "#fff",
               borderRadius: "50%",
@@ -222,24 +222,27 @@ export default function MapScreen() {
             }}
             onPress={recentreCurrentLocation}
           >
-            <Ionicons name="locate-outline" size={22} color={"#000"}></Ionicons>
-          </TouchableOpacity>
-          <TouchableOpacity
+            <Ionicons
+              name="locate-outline"
+              size={22}
+              color={recentre ? "blue" : "#000"}
+            ></Ionicons>
+          </TouchableButton>
+          <TouchableButton
             style={{
               backgroundColor: "#fff",
               borderRadius: "50%",
               padding: 8,
               alignSelf: "flex-end",
             }}
-            onPress={handleCheckAvailable}
+            onPress={checkAvailableDrivers}
           >
             <Ionicons name="beer-outline" size={22} color={"#000"}></Ionicons>
-          </TouchableOpacity>
+          </TouchableButton>
         </Animated.View>
       </View>
 
       <BottomPanel
-        enablePanClose={closablePan}
         ref={sheetRef}
         onPositionChange={(height) => {
           sheetY.set(height + 50);
@@ -254,10 +257,14 @@ export default function MapScreen() {
               </Text>
               <LocationInput
                 editable={false}
-                placeholder="Select Pick Up Location"
-                value={trimSpace(
-                  `${origin.description} ${origin.secondaryText}`
-                )}
+                placeholder={
+                  searching ? "Fetching Location..." : "Select Pick Up Location"
+                }
+                value={
+                  searching
+                    ? ""
+                    : trimSpace(`${origin.description} ${origin.secondaryText}`)
+                }
                 onPress={() => {
                   navigation.navigate(
                     "LocationSearch",
@@ -266,44 +273,63 @@ export default function MapScreen() {
                   );
                 }}
               />
-              <LocationInput
-                editable={false}
-                placeholder="Select Drop Location"
-                value={trimSpace(
-                  `${destination.description} ${destination.secondaryText}`
-                )}
-                onPress={() => {
-                  navigation.navigate(
-                    "LocationSearch",
-                    {
-                      searchFor: DESTINATION,
-                      title: "Choose Drop Location",
-                    },
-                    { merge: true }
-                  );
-                }}
-                iconColor="red"
-              />
 
-              {destination.description && origin.description && !id && (
-                <TouchableOpacity
+              {!confirmLocation && (!id || id === 0) && (
+                <TouchableButton
                   style={styles.button}
+                  disabled={searching}
                   onPress={() => {
-                    navigation.navigate("RideBooking");
+                    setConfirmLocation(true);
+                    updateMapLocation();
                   }}
                 >
-                  <Text style={styles.buttonText}>Search Ride</Text>
-                </TouchableOpacity>
+                  <Text style={styles.buttonText}>Confirm Location</Text>
+                </TouchableButton>
               )}
-              {id > 0 && (
-                <TouchableOpacity
-                  style={styles.button}
+
+              {confirmLocation && (
+                <LocationInput
+                  editable={false}
+                  placeholder="Select Drop Location"
+                  value={trimSpace(
+                    `${destination.description} ${destination.secondaryText}`
+                  )}
+                  onPress={() => {
+                    navigation.navigate(
+                      "LocationSearch",
+                      {
+                        searchFor: DESTINATION,
+                        title: "Choose Drop Location",
+                      },
+                      { merge: true }
+                    );
+                  }}
+                  iconColor="red"
+                />
+              )}
+
+              {confirmLocation &&
+                destination.description &&
+                origin.description &&
+                !id && (
+                  <TouchableButton
+                    style={commonStyles.button}
+                    onPress={() => {
+                      navigation.navigate("RideBooking");
+                    }}
+                  >
+                    <Text style={commonStyles.buttonText}>Search Ride</Text>
+                  </TouchableButton>
+                )}
+              {confirmLocation && id > 0 && (
+                <TouchableButton
+                  style={commonStyles.button}
                   onPress={() => {
                     navigation.navigate("RideBooking");
                   }}
                 >
-                  <Text style={styles.buttonText}>View Ride</Text>
-                </TouchableOpacity>
+                  <Text style={commonStyles.buttonText}>View Ride</Text>
+                </TouchableButton>
               )}
             </View>
           )}
@@ -327,14 +353,14 @@ export default function MapScreen() {
               >
                 No Service available in this Area
               </Text>
-              <TouchableOpacity
+              <TouchableButton
                 style={styles.phoneBookingButton}
                 onPress={() => {
                   navigation.navigate("PhoneBooking");
                 }}
               >
                 <Text style={styles.buttonText}>Phone Booking</Text>
-              </TouchableOpacity>
+              </TouchableButton>
             </View>
           )}
         </View>

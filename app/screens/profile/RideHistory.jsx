@@ -40,6 +40,7 @@ export default function RideHistory() {
   const bgColorMap = {
     COMPLETED: "#d7f6e0",
     CANCELLED: "#f7d7d7ff",
+    REJECTED: "#f7d7d7ff",
     ONGOING: "#f3f2cfff",
     ASSIGNED: "#f3f2cfff",
     REQUESTED: "#f3f2cfff",
@@ -47,6 +48,7 @@ export default function RideHistory() {
   const colorMap = {
     COMPLETED: "#0a7a3a",
     CANCELLED: "#810d0dff",
+    REJECTED: "#810d0dff",
     ONGOING: "#7a790dff",
     ASSIGNED: "#7a790dff",
     REQUESTED: "#7a790dff",

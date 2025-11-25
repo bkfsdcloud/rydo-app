@@ -1,10 +1,11 @@
 import BottomPanel from "@/app/component/BottomPanel";
 import RatingComponent from "@/app/component/RatingComponent";
-import { useAlert } from "@/app/context/AlertContext";
-import LocationContext from "@/app/context/LocationContext";
+import TouchableButton from "@/app/component/TouchableButton";
+import { LocationContext } from "@/app/context/LocationContext";
 import SocketContext from "@/app/context/SocketContext";
 import { handleGetRoute } from "@/scripts/api/geoApi";
-import { activeRide, available, createRide } from "@/scripts/api/riderApi";
+import { allTransactions } from "@/scripts/api/miscApi";
+import { activeRide, available } from "@/scripts/api/riderApi";
 import { commonStyles } from "@/scripts/constants";
 import { Ionicons } from "@expo/vector-icons";
 import polylineTool from "@mapbox/polyline";
@@ -17,7 +18,14 @@ import {
   useRef,
   useState,
 } from "react";
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
 import Animated, {
   useAnimatedStyle,
@@ -42,25 +50,36 @@ export default function RideBooking() {
     destination,
     setDistance,
     setDuration,
-    distanceKm,
     setDistanceKm,
-    durationMin,
     setDurationMin,
-    fare,
     setFares,
-    transportMode,
     setTransportMode,
-    category,
-    paymentMethod,
     setPolyline,
     resetRide,
+    riderId,
+    setRiderId,
+    driverId,
+    setDriverId,
+    paymentMethod,
+    setPaymentMethod,
+    setCommissionAmount,
+    setCategory,
+    setFare,
+    setDriverEarning,
   } = useRideStore();
   const [localPolyline, setLocalPolyline] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const mapRef = useRef(null);
   const sheetRef = useRef(null);
   const [closablePan, setClosablePan] = useState(false);
+  const [panelTitle, setPanelTitle] = useState("");
   const [bottomView, setBottomView] = useState("DEFAULT");
+  const [wallet, setWallet] = useState({
+    balance: 0,
+    walletId: 0,
+    transactions: [],
+  });
 
   const sheetY = useSharedValue(0);
   const floatingStyle = useAnimatedStyle(() => {
@@ -73,16 +92,24 @@ export default function RideBooking() {
     };
   });
 
-  const { showAlert, hideAlert } = useAlert();
-
-  const setDefault = () => {
-    setBottomView("DEFAULT");
-    setClosablePan(false);
-    sheetRef.current?.expand();
+  const fetchWallet = async () => {
+    setLoading(true);
+    const transactions = await allTransactions({ skipGlobalLoader: true });
+    setLoading(false);
+    if (transactions.data) {
+      setWallet(transactions.data);
+    }
   };
 
+  const setDefault = useCallback(() => {
+    setBottomView("DEFAULT");
+    setClosablePan(false);
+    setPanelTitle("");
+    sheetRef.current?.expand();
+  }, []);
+
   useEffect(() => {
-    if (id > 0 && !localPolyline?.length) {
+    if (!localPolyline?.length) {
       handleRoute();
     }
   }, [id, localPolyline]);
@@ -94,12 +121,18 @@ export default function RideBooking() {
     };
   }, []);
 
-  const handleMessage = (parsed) => {
+  const handleMessage = useCallback((parsed) => {
     if (parsed?.event === "sendMessage") return;
     console.log("📨 Notification from the driver:", parsed);
     if (parsed?.data) {
       setId(parsed?.data?.id);
       setStatus(parsed?.data?.status);
+      if (parsed?.data?.riderId) {
+        setRiderId(parsed?.data?.riderId);
+      }
+      if (parsed?.data?.driverId) {
+        setDriverId(parsed?.data?.driverId);
+      }
       Alert.alert("Information", parsed?.message);
       if (parsed?.data?.status === "COMPLETED") {
         setBottomView("RATE");
@@ -110,7 +143,7 @@ export default function RideBooking() {
       // resetRide();
       Alert.alert("Information", parsed?.message);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (mapRef.current && localPolyline?.length > 0) {
@@ -142,27 +175,16 @@ export default function RideBooking() {
     setDistanceKm(res.distanceKm);
     setDurationMin(res.durationMin);
     setTransportMode("Car");
-  };
-
-  const handleBookRide = async () => {
-    const body = {
-      fareEstimated: fare,
-      pickupLat: origin.coords.lat,
-      pickupLng: origin.coords.lng,
-      dropLat: destination.coords.lat,
-      dropLng: destination.coords.lng,
-      distanceKm: distanceKm,
-      pickupLocation: origin.description,
-      dropLocation: destination.description,
-      duration: durationMin,
-      transportMode,
-      category,
-      paymentMethod,
-    };
-    const res = await createRide(body);
-    setId(res.data?.id);
-    setStatus(res.data?.status);
-    Alert.alert("Ride Created", res.message);
+    if (res.fares && Object.keys(res.fares).length > 0) {
+      const entries = Object.entries(res.fares || {});
+      const [firstItem, firstValue] = entries[0];
+      const { fare, commissionAmount, driverEarning } = firstValue;
+      setCategory(firstItem);
+      setFare(fare);
+      setPaymentMethod("Cash");
+      setCommissionAmount(commissionAmount);
+      setDriverEarning(driverEarning);
+    }
   };
 
   const originMarkerCb = useMemo(() => {
@@ -172,8 +194,8 @@ export default function RideBooking() {
         anchor={{ x: 0.5, y: 0.5 }}
         pinColor="green"
         coordinate={{
-          latitude: origin.coords.lat || location.lat,
-          longitude: origin.coords.lng || location.lng,
+          latitude: (origin.coords && origin.coords.lat) || location.lat,
+          longitude: (origin.coords && origin.coords.lng) || location.lng,
         }}
         title={origin.description}
       >
@@ -227,13 +249,8 @@ export default function RideBooking() {
       latitudeDelta: 0.003,
       longitudeDelta: 0.003,
     }),
-    [origin.coords]
+    [origin.coords, location]
   );
-
-  const handleShowAlert = useCallback((options) => {
-    showAlert(options);
-  }, []);
-  const handleHideAlert = useCallback(() => hideAlert(), []);
 
   return (
     <View style={styles.container}>
@@ -347,6 +364,7 @@ export default function RideBooking() {
 
       <BottomPanel
         enablePanClose={closablePan}
+        title={panelTitle}
         ref={sheetRef}
         onPositionChange={(height) => {
           sheetY.set(height + 50);
@@ -359,15 +377,146 @@ export default function RideBooking() {
               Status: {status}
             </Text>
             <RideSummaryModal
-              onConfirm={handleBookRide}
-              handleShowAlert={handleShowAlert}
-              handleHideAlert={handleHideAlert}
+              onShowBottomPanel={(view) => {
+                fetchWallet();
+                setBottomView(view);
+                setPanelTitle("Payment Method");
+              }}
             />
           </View>
         )}
         {bottomView === "CHAT" && <ChatScreen></ChatScreen>}
         {bottomView === "RATE" && (
-          <RatingComponent onClose={setDefault}></RatingComponent>
+          <RatingComponent
+            rideId={id}
+            riderId={riderId}
+            driverId={driverId}
+            onClose={setDefault}
+          ></RatingComponent>
+        )}
+        {bottomView === "PAYMENT_METHOD" && (
+          <View>
+            <Text style={styles.sectionLabel}>WALLETS</Text>
+            <TouchableOpacity
+              style={[
+                commonStyles.card,
+                commonStyles.cardBorder,
+                styles.customCard,
+              ]}
+              disabled={wallet.balance === 0}
+              onPress={() => setPaymentMethod("Wallet")}
+            >
+              <View style={commonStyles.cardLeft}>
+                <View
+                  style={[
+                    commonStyles.iconBg,
+                    { backgroundColor: "#eef2f5ff" },
+                  ]}
+                >
+                  {loading && <ActivityIndicator size="small" color={"red"} />}
+                  {!loading && (
+                    <Text style={styles.icon}>
+                      <Ionicons
+                        name={"wallet-outline"}
+                        size={20}
+                        color={"#f7312aff"}
+                      />
+                    </Text>
+                  )}
+                </View>
+                <View style={[commonStyles.cardText, { flexDirection: "row" }]}>
+                  <Text style={commonStyles.cardTitle}>Wallet</Text>
+                  <Text style={[commonStyles.cardSubtitle, { marginLeft: 5 }]}>
+                    ( Balance : ₹{wallet.balance.toFixed(2)} )
+                  </Text>
+                </View>
+              </View>
+              <View>
+                <Ionicons
+                  name={
+                    paymentMethod === "Wallet"
+                      ? "radio-button-on-outline"
+                      : "ellipse-outline"
+                  }
+                  size={20}
+                  color={"#333"}
+                />
+              </View>
+            </TouchableOpacity>
+            <Text style={commonStyles.sectionLabel}>OTHER PAYMENTS</Text>
+            <TouchableButton
+              style={[
+                commonStyles.card,
+                commonStyles.cardBorder,
+                styles.customCard,
+              ]}
+              onPress={() => setPaymentMethod("Cash")}
+            >
+              <View style={commonStyles.cardLeft}>
+                <View
+                  style={[
+                    commonStyles.iconBg,
+                    { backgroundColor: "#eef2f5ff" },
+                  ]}
+                >
+                  <Ionicons name={"cash-outline"} size={20} color={"orange"} />
+                </View>
+                <View style={commonStyles.cardText}>
+                  <Text style={commonStyles.cardTitle}>Cash</Text>
+                </View>
+              </View>
+              <View>
+                <Ionicons
+                  name={
+                    paymentMethod === "Cash"
+                      ? "radio-button-on-outline"
+                      : "ellipse-outline"
+                  }
+                  size={20}
+                  color={"#333"}
+                />
+              </View>
+            </TouchableButton>
+            <TouchableButton
+              style={[
+                commonStyles.card,
+                commonStyles.cardBorder,
+                styles.customCard,
+              ]}
+              onPress={() => setPaymentMethod("UPI")}
+            >
+              <View style={commonStyles.cardLeft}>
+                <View
+                  style={[
+                    commonStyles.iconBg,
+                    { backgroundColor: "#eef2f5ff" },
+                  ]}
+                >
+                  <Ionicons name={"qr-code-outline"} size={20} color={"#333"} />
+                </View>
+                <View style={commonStyles.cardText}>
+                  <Text style={commonStyles.cardTitle}>UPI</Text>
+                </View>
+              </View>
+              <View>
+                <Ionicons
+                  name={
+                    paymentMethod === "UPI"
+                      ? "radio-button-on-outline"
+                      : "ellipse-outline"
+                  }
+                  size={20}
+                  color={"#333"}
+                />
+              </View>
+            </TouchableButton>
+            <TouchableButton
+              onPress={setDefault}
+              style={[commonStyles.button, { backgroundColor: "#000" }]}
+            >
+              <Text style={commonStyles.buttonText}>Done</Text>
+            </TouchableButton>
+          </View>
         )}
       </BottomPanel>
     </View>
@@ -377,93 +526,5 @@ export default function RideBooking() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
-  overlayContainer: {
-    position: "absolute",
-    top: 40,
-    left: 10,
-    right: 10,
-    zIndex: 999,
-    flex: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  welcome: { fontSize: 16, fontWeight: "bold", color: "#000" },
-  inputContainer: { marginVertical: 5, position: "relative" },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 10,
-    borderRadius: 5,
-    marginTop: 5,
-    backgroundColor: "#fff",
-  },
-  dropdown: {
-    position: "absolute",
-    top: 45,
-    width: "100%",
-    maxHeight: 150,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 5,
-    zIndex: 1000,
-  },
-  item: { padding: 10, borderBottomWidth: 1, borderBottomColor: "#eee" },
-  clearButton: {
-    position: "absolute",
-    right: 10,
-    top: 12,
-  },
-  bottomCard: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "#fff",
-    paddingVertical: 20,
-    paddingHorizontal: 15,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: -2 },
-    shadowRadius: 6,
-    elevation: 5,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  subtitle: {
-    color: "#777",
-    marginTop: 4,
-  },
-  button: {
-    backgroundColor: "#007BFF",
-    margin: 10,
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  phoneBookingButton: {
-    backgroundColor: "#f0140cff",
-    marginTop: 15,
-    opacity: 0.3,
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  markerFixed: {
-    position: "absolute",
-    top: "50%",
-    left: "50%",
-    marginLeft: -20, // half icon width
-    marginTop: -40, // half icon height
-    zIndex: 10,
-  },
+  customCard: { paddingVertical: 5 },
 });

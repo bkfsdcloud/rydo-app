@@ -9,26 +9,36 @@ const SocketContext = createContext(null);
 export const SocketProvider = ({ children }) => {
   const socketRef = useRef(null);
   const listenersRef = useRef(new Set());
+  const retryCountRef = useRef(0);
+  const shouldRetryRef = useRef(true);
   const [connected, setConnected] = useState(false);
+
   const { token, user } = useContext(AuthContext);
   const { location } = useContext(LocationContext);
 
+  const MAX_RETRIES = 5;
+
   useEffect(() => {
-    console.log("token: ", token);
-    let socket = null;
-    if (token && !socketRef.current) {
-      socket = connectSocket();
+    console.log("token:", token);
+
+    if (token) {
+      shouldRetryRef.current = true; // allow retry only if user is logged in
+      connectSocket();
+    } else {
+      disconnectSocket(); // no retry when logged out
     }
 
     return () => {
-      console.log("🔌 Cleaning up WebSocket");
-      socket?.close();
-      socketRef.current = null;
+      disconnectSocket();
     };
   }, [token]);
 
   const connectSocket = () => {
-    console.log("🌐 Connecting WebSocket For ", user?.name);
+    if (!token) return;
+    if (socketRef.current) return; // avoid duplicate sockets
+
+    console.log("🌐 Connecting WebSocket for", user?.name);
+
     const socket = new WebSocket(SOCKET_URL, undefined, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -36,10 +46,12 @@ export const SocketProvider = ({ children }) => {
     socketRef.current = socket;
 
     socket.onopen = () => {
-      console.log("✅ WebSocket Connected For ", user?.name);
+      console.log("✅ WebSocket Connected for", user?.name);
       setConnected(true);
 
-      // 🔥 Send initial registration info
+      retryCountRef.current = 0; // RESET retry count on successful connection
+
+      // Driver registers initial location
       if (user?.role === "DRIVER") {
         socket.send(
           JSON.stringify({
@@ -59,30 +71,44 @@ export const SocketProvider = ({ children }) => {
     };
 
     socket.onmessage = (event) => {
-      const parsedEvent = typeof event === "string" ? JSON.parse(event) : event;
-      const parsedData =
-        typeof parsedEvent?.data === "string"
-          ? JSON.parse(parsedEvent?.data)
-          : parsedEvent?.data;
-      listenersRef.current.forEach((cb) => cb(parsedData));
+      const parsed = JSON.parse(event.data);
+      listenersRef.current.forEach((cb) => cb(parsed));
     };
 
     socket.onerror = (err) => {
-      console.log("❌ WebSocket Error:", err);
+      console.log("❌ WebSocket Error:", err.message);
     };
 
     socket.onclose = () => {
-      console.log("⚠️ WebSocket Closed For ", user?.name);
+      console.log("⚠️ WebSocket Closed for", user?.name);
       setConnected(false);
       socketRef.current = null;
-      // setTimeout(connectSocket, 5000);
-    };
 
-    return socket;
+      // 🔥 Stop retry when logout
+      if (!shouldRetryRef.current) {
+        console.log("⛔ Retry stopped because user logged out");
+        return;
+      }
+
+      // 🔥 Stop retry after MAX retries
+      if (retryCountRef.current >= MAX_RETRIES) {
+        console.log("❌ Max retries reached. Stopping WebSocket reconnect.");
+        return;
+      }
+
+      retryCountRef.current++;
+      console.log(`♻️ Retrying WebSocket... (${retryCountRef.current}/5)`);
+
+      setTimeout(connectSocket, 5000); // retry after 5 sec
+    };
   };
 
-  const disconnect = () => {
-    console.log("🔌 Disconnect WebSocket manually");
+  const disconnectSocket = () => {
+    shouldRetryRef.current = false;
+    retryCountRef.current = 0;
+
+    console.log("🔌 Manually disconnecting WebSocket");
+
     if (socketRef.current) {
       socketRef.current.close();
       socketRef.current = null;
@@ -93,10 +119,7 @@ export const SocketProvider = ({ children }) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify(message));
     } else {
-      console.warn(
-        "⚠️ WebSocket not connected, message not sent : ",
-        user?.name
-      );
+      console.warn("⚠️ WebSocket not connected, message not sent");
     }
   };
 
@@ -107,7 +130,7 @@ export const SocketProvider = ({ children }) => {
     <SocketContext.Provider
       value={{
         connected,
-        disconnect,
+        disconnect: disconnectSocket,
         sendMessage,
         addListener,
         removeListener,

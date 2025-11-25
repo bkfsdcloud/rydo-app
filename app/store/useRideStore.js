@@ -28,6 +28,8 @@ export const useRideStore = create((set) => ({
   transportMode: null,
   category: null,
   paymentMethod: null,
+  commissionAmount: null,
+  driverEarning: null,
 
   setStatus: (status) => set({ status }),
   setDriverId: (driverId) => set({ driverId }),
@@ -56,6 +58,8 @@ export const useRideStore = create((set) => ({
   setTransportMode: (transportMode) => set({ transportMode }),
   setCategory: (category) => set({ category }),
   setPaymentMethod: (paymentMethod) => set({ paymentMethod }),
+  setCommissionAmount: (commissionAmount) => set({ commissionAmount }),
+  setDriverEarning: (driverEarning) => set({ driverEarning }),
 
   setLocation: (key, data, replace = false) =>
     set((state) => ({
@@ -87,6 +91,8 @@ export const useRideStore = create((set) => ({
       vehicle: null,
       category: null,
       paymentMode: null,
+      commissionAmount: null,
+      driverEarning: null,
     }),
   resetDestination: () =>
     set({

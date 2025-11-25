@@ -27,6 +27,8 @@ export const AuthProvider = ({ children }) => {
     setFare,
     setDriverId,
     setRiderId,
+    setCommissionAmount,
+    setDriverEarning,
   } = useRideStore();
 
   const { setMessages } = useMessageStore();
@@ -86,6 +88,8 @@ export const AuthProvider = ({ children }) => {
       setDuration(res?.data?.duration_minutes);
       setFare(res?.data?.fare_estimated);
       setDistance(res?.data?.distance_km);
+      setCommissionAmount(res?.data?.commissionAmount);
+      setDriverEarning(res?.data?.driverEarning);
     }
   };
 

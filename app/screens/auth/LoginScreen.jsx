@@ -1,178 +1,108 @@
+import TouchableButton from "@/app/component/TouchableButton";
 import { commonStyles } from "@/scripts/constants";
 import { useNavigation } from "@react-navigation/native";
-import React, { useContext, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
+  Animated,
+  Image,
+  Keyboard,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
-import Toast from "react-native-toast-message";
-import { genOtp, verifyOtp } from "../../../scripts/api/userApi";
-import AuthContext from "../../context/AuthContext";
+import { genOtp } from "../../../scripts/api/userApi";
 
 export default function LoginScreen() {
   const navigation = useNavigation();
   const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [generateOtp, setGenerateOtp] = useState(false);
-
-  const { saveToken } = useContext(AuthContext);
-
-  const isDisabled = phone.trim().length !== 10;
-  const isValidOtp = otp.trim().length !== 6;
-
-  const resendOtp = async () => {
-    setGenerateOtp(false);
-    setOtp("");
-    triggerOtp();
-  };
 
   const triggerOtp = async () => {
-    if (!phone) {
-      Alert.alert("Error", "Please provide phone number");
-      return;
-    }
     try {
-      const response = await genOtp(phone);
-      setGenerateOtp(true);
-      Toast.show({
-        type: "success",
-        text1: "Success",
-        text2: response.data.message,
-        position: "top",
-      });
+      await genOtp(phone);
+      navigation.navigate("VerifyOtpScreen", { phone });
     } catch (error) {
       console.log(error);
     }
   };
 
-  const verifyOtpI = async () => {
-    if (!otp) {
-      Alert.alert("Error", "Please provide OTP");
-      return;
-    }
-    try {
-      const response = await verifyOtp(phone, otp);
-      if (response.data?.token) {
-        await saveToken(response.data);
-      } else if (response.data.message === "New user") {
-        navigation.navigate("SignUp", { phone });
-      }
-      // Toast.show({
-      //   type: "success",
-      //   text1: "Success",
-      //   text2: response.data.message,
-      //   position: "top",
-      // });
-    } catch (error) {
-      console.log(error);
-    }
-  };
+  const translateY = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const show = Keyboard.addListener("keyboardDidShow", (e) => {
+      Animated.timing(translateY, {
+        toValue: -e.endCoordinates.height + 200,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    });
+
+    const hide = Keyboard.addListener("keyboardDidHide", () => {
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    });
+
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
 
   return (
-    <>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
-      >
-        <View style={commonStyles.container}>
-          <View style={styles.header}>
-            <Text style={styles.welcomeText}>Welcome to</Text>
-            <Text style={styles.brandText}>Taxi Taxi!</Text>
-          </View>
-          {/* <Image
-            source={require("@/assets/images/car-img-2.png")}
-            style={{ height: 300, width: "100%" }}
-          ></Image> */}
-          <View style={[commonStyles.column]}>
-            <Text style={styles.sectionTitle}>
-              Login with your Phone Number
-            </Text>
-            <TextInput
-              textContentType="telephoneNumber"
-              placeholder="eg. 9841232587"
-              keyboardType="number-pad"
-              returnKeyType="done"
-              clearButtonMode="always"
-              value={phone}
-              placeholderTextColor="#929292ff"
-              maxLength={11}
-              onChangeText={(txt) => {
-                setPhone(txt.replaceAll("-", ""));
-              }}
-              allowFontScaling={false}
-              style={[
-                commonStyles.input,
-                commonStyles.textAlignCenter,
-                { backgroundColor: "#fff" },
-              ]}
-            />
-            {generateOtp && (
-              <TextInput
-                placeholder="OTP"
-                clearButtonMode="always"
-                textContentType="oneTimeCode"
-                returnKeyType="done"
-                keyboardType="number-pad"
-                placeholderTextColor="#929292ff"
-                value={otp}
-                maxLength={6}
-                allowFontScaling={false}
-                onChangeText={setOtp}
-                style={[
-                  commonStyles.input,
-                  commonStyles.textAlignCenter,
-                  { backgroundColor: "#fff" },
-                ]}
-              />
-            )}
-            <View style={commonStyles.row}>
-              {generateOtp ? (
-                <>
-                  <TouchableOpacity
-                    onPress={() => verifyOtpI()}
-                    disabled={otp?.length !== 6}
-                    style={[
-                      commonStyles.button,
-                      isValidOtp ? { backgroundColor: "grey" } : {},
-                    ]}
-                  >
-                    <Text style={commonStyles.buttonText}>Verify</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => resendOtp()}
-                    style={[commonStyles.button]}
-                  >
-                    <Text style={commonStyles.buttonText}>Resend OTP</Text>
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <TouchableOpacity
-                  disabled={phone?.length !== 10}
-                  onPress={() => triggerOtp()}
-                  style={[
-                    commonStyles.button,
-                    isDisabled ? commonStyles.disabled : {},
-                  ]}
-                >
-                  <Text style={[commonStyles.buttonText]}>Send OTP</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-          <Text style={styles.disclaimer}>
-            By Continuing, You Agree to the Red Taxi's{" "}
-            <Text style={styles.link}>Terms & Conditions</Text> And{" "}
-            <Text style={styles.link}>Privacy Policy</Text>
-          </Text>
+    <Animated.View style={{ flex: 1, transform: [{ translateY }] }}>
+      <View style={commonStyles.container}>
+        <View style={styles.header}>
+          <Text style={styles.brandText}>Welcome to</Text>
+          {/* <Text style={styles.brandText}>Taxi Taxi!</Text> */}
         </View>
-      </KeyboardAvoidingView>
-    </>
+        <Image
+          source={require("@/assets/images/taxitaxi-logo.png")}
+          style={{
+            width: "100%",
+            height: 300,
+          }}
+        />
+        <View style={[commonStyles.column]}>
+          <Text style={styles.sectionTitle}>Login with your Phone Number</Text>
+          <TextInput
+            textContentType="telephoneNumber"
+            placeholder="eg. 9841232587"
+            keyboardType="number-pad"
+            returnKeyType="done"
+            clearButtonMode="always"
+            value={phone}
+            placeholderTextColor="#929292ff"
+            maxLength={11}
+            onChangeText={(txt) => {
+              setPhone(txt.replaceAll("-", ""));
+            }}
+            allowFontScaling={false}
+            style={[
+              commonStyles.input,
+              commonStyles.textAlignCenter,
+              { backgroundColor: "#fff" },
+            ]}
+          />
+          <View style={commonStyles.row}>
+            <TouchableButton
+              disabled={phone?.length !== 10}
+              onPress={triggerOtp}
+              style={[commonStyles.button]}
+            >
+              <Text style={[commonStyles.buttonText]}>Send OTP</Text>
+            </TouchableButton>
+          </View>
+        </View>
+        <Text style={styles.disclaimer}>
+          By Continuing, You Agree to the Red Taxi's{" "}
+          <Text style={styles.link}>Terms & Conditions</Text> And{" "}
+          <Text style={styles.link}>Privacy Policy</Text>
+        </Text>
+      </View>
+    </Animated.View>
   );
 }
 
@@ -202,7 +132,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#555",
     marginTop: 18,
-    paddingHorizontal: 20,
+    paddingHorizontal: 15,
     lineHeight: 20,
   },
   link: {

@@ -1,3 +1,4 @@
+import { createWallet } from "@/scripts/api/miscApi";
 import { commonStyles } from "@/scripts/constants";
 import { useRoute } from "@react-navigation/native";
 import { useContext, useEffect, useState } from "react";
@@ -30,17 +31,17 @@ export default function SignUp({ navigation }) {
   const route = useRoute();
 
   useEffect(() => {
-    // async function initNotifications() {
-    //   const result = await registerForPushNotificationsAsync();
-    //   if (route.params?.phone) {
-    //     updateUser("phone", route.params?.phone);
-    //   }
-    //   if (result) {
-    //     updateUser("deviceId", result.token);
-    //     console.log(`Registered with ${result.provider} token:`, result.token);
-    //   }
-    // }
-    // initNotifications();
+    async function initNotifications() {
+      // const result = await registerForPushNotificationsAsync();
+      if (route.params?.phone) {
+        updateUser("phone", route.params?.phone);
+      }
+      // if (result) {
+      //   updateUser("deviceId", result.token);
+      //   console.log(`Registered with ${result.provider} token:`, result.token);
+      // }
+    }
+    initNotifications();
   }, []);
 
   const handleSubmit = async () => {
@@ -56,7 +57,7 @@ export default function SignUp({ navigation }) {
 
       const response = await signUp({
         ...newUser,
-        role: "CUSTOMER",
+        role: "RIDER",
       });
       console.log("status: ", response.status);
       if (response.status === 201) {
@@ -66,6 +67,7 @@ export default function SignUp({ navigation }) {
           text2: response.data.message,
           position: "top",
         });
+        createWallet({});
         await saveToken(response.data);
         navigation.navigate("Login");
       } else {

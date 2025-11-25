@@ -28,15 +28,13 @@ export default function WalletTransaction() {
   };
 
   const renderItem = ({ item }) => {
-    const isNegative = item.type === "DEBIT";
+    const isNegative = item.type === "RIDE_PAYMENT" || item.amount < 0;
     const amountColor = isNegative ? "#e74c3c" : "#16a085";
-    const emoji = item.type === "DEBIT" ? "💳" : "💸";
-    const bgColor = item.type === "DEBIT" ? "#f2d5d9" : "#d6f7e6";
+    const bgColor = isNegative ? "#f2d5d9" : "#d6f7e6";
 
     return (
       <View style={styles.row}>
         <View style={[styles.iconCircle, { backgroundColor: bgColor }]}>
-          {/* <Text style={styles.iconText}>{emoji}</Text> */}
           <Ionicons
             name={isNegative ? "car-outline" : "card-outline"}
             size={22}
@@ -44,13 +42,14 @@ export default function WalletTransaction() {
           ></Ionicons>
         </View>
         <View style={styles.rowInfo}>
-          <Text style={styles.rowTitle}>{item.type}</Text>
+          <Text style={styles.rowTitle}>{item.remarks || item.type}</Text>
           <Text style={styles.rowDate}>
             {moment(item.created_at).format("MMM DD, YYYY HH:mm A")}
           </Text>
         </View>
         <Text style={[styles.rowAmount, { color: amountColor }]}>
-          {isNegative ? "-" : "+"}₹{item.amount}
+          {isNegative ? "-" : "+"}₹
+          {item.amount < 0 ? item.amount * -1 : item.amount}
         </Text>
       </View>
     );

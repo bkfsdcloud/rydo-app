@@ -1,28 +1,24 @@
 // RideSummaryModal.jsx
-import { useAlert } from "@/app/context/AlertContext";
-import { LocationContext } from "@/app/context/LocationContext";
-import { cancelRide, driverStatus } from "@/scripts/api/riderApi";
-import { getDistanceKm } from "@/scripts/GeoUtil";
+import CancelComponent from "@/app/component/CancelComponent";
+import TouchableButton from "@/app/component/TouchableButton";
+import { createRide } from "@/scripts/api/riderApi";
+import { commonStyles } from "@/scripts/constants";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { useContext, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useRideStore } from "../../store/useRideStore";
 
-export default function RideSummaryModal({
-  onConfirm,
-  handleShowAlert,
-  handleHideAlert,
-}) {
-  const paymentModes = ["Cash", "UPI"];
-  const { location } = useContext(LocationContext);
+export default function RideSummaryModal({ onShowBottomPanel }) {
   const navigation = useNavigation();
-  const { showAlert, hideAlert } = useAlert();
+  const [showCancelTab, setShowCancelTab] = useState(false);
 
   const {
+    destination,
+    origin,
     status,
+    setStatus,
     paymentMethod,
-    setPaymentMethod,
     category,
     setCategory,
     duration,
@@ -31,100 +27,82 @@ export default function RideSummaryModal({
     distance,
     fares,
     id,
+    setId,
+    distanceKm,
     resetRide,
+    durationMin,
+    transportMode,
+    setCommissionAmount,
+    commissionAmount,
+    setDriverEarning,
+    driverEarning,
   } = useRideStore();
-  const [reason, setReason] = useState("");
-  const [cancellationFee, setCancellationFee] = useState(0);
 
-  const getOpacity = () =>
-    id > 0 || !category || !fare ? { opacity: 0.6 } : { opacity: 1 };
+  const isDisabled = useCallback(() => id > 0, [id]);
 
-  const handleCancel = async () => {
-    handleHideAlert();
-    if (status === "PENDING" || status === "REQUESTED") {
-      const res = await cancelRide({
-        rideData: { id, status },
-        reason,
-        location: { lat: location.lat, lng: location.lng },
-      });
-      Alert.alert("Info", res?.message);
-      resetRide();
-      navigation.navigate("RiderHome");
-    } else if (status === "ASSIGNED" || status === "ACCEPTED") {
-      const res = await cancelRide({
-        rideData: { id, status },
-        reason,
-        cancellationFee,
-        location: { lat: location.lat, lng: location.lng },
-      });
-      if (res?.data) {
+  const handleCancel = useCallback(
+    async (ack) => {
+      setShowCancelTab(false);
+      if (ack) {
         resetRide();
         navigation.navigate("RiderHome");
       }
-      Alert.alert("Info", res?.message);
+    },
+    [resetRide, navigation]
+  );
+
+  const handleBookRide = useCallback(async () => {
+    const body = {
+      fareEstimated: fare,
+      pickupLat: origin.coords.lat,
+      pickupLng: origin.coords.lng,
+      dropLat: destination.coords.lat,
+      dropLng: destination.coords.lng,
+      distanceKm: distanceKm,
+      pickupLocation: origin.description,
+      dropLocation: destination.description,
+      duration: durationMin,
+      transportMode,
+      category,
+      paymentMethod,
+      commissionAmount,
+      driverEarning,
+    };
+    const res = await createRide(body);
+    if (res.data) {
+      setId(res.data?.id);
+      setStatus(res.data?.status);
+      Alert.alert("Ride Created", res.message);
     }
-  };
+  }, [
+    fare,
+    origin,
+    destination,
+    distanceKm,
+    durationMin,
+    transportMode,
+    category,
+    paymentMethod,
+    setId,
+    setStatus,
+    commissionAmount,
+    driverEarning,
+  ]);
 
-  // function getDistanceKm(start, end) {
-  //   const lat1 = start.lat;
-  //   const lon1 = start.lng;
-  //   const lat2 = end.lat;
-  //   const lon2 = end.lng;
-  //   const R = 6371; // Earth radius in km
-  //   const dLat = (lat2 - lat1) * (Math.PI / 180);
-  //   const dLon = (lon2 - lon1) * (Math.PI / 180);
-  //   const a =
-  //     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-  //     Math.cos(lat1 * (Math.PI / 180)) *
-  //       Math.cos(lat2 * (Math.PI / 180)) *
-  //       Math.sin(dLon / 2) *
-  //       Math.sin(dLon / 2);
-  //   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  //   return R * c; // Distance in km
-  // }
-
-  useEffect(() => {
-    if (id === 0) {
-      const entries = Object.entries(fares || {});
-      const [firstItem, firstValue] = entries[0];
-      setCategory(firstItem);
-      setFare(firstValue);
-      setPaymentMethod("Cash");
-    }
-  }, [fares]);
-
-  const handleAllCancel = async () => {
-    if (status === "PENDING" || status === "REQUESTED") {
-      handleShowAlert({
-        title: "Info",
-        message: `Are you sure want to cancel the ride?`,
-        leftText: "No",
-        rightText: "Yes",
-        onRight: () => handleCancel,
-      });
-      handleHideAlert();
-    } else if (status === "ASSIGNED" || status === "ACCEPTED") {
-      const res = await driverStatus({ id });
-      if (res.data?.positions) {
-        const distance = getDistanceKm(location, res.data.positions);
-
-        console.log("distance: ", distance);
-        if (distance < 1) {
-          setCancellationFee(50);
-
-          showAlert({
-            title: `Charges applicable: ₹50`,
-            message: `Driver is nearby Are you sure want to cancel the ride?`,
-            leftText: "No",
-            rightText: "Yes",
-          });
-        }
-      }
-    }
-  };
+  const handleSelectCategory = useCallback((item, value) => {
+    console.log("Item, Value", item, value);
+    setCategory(item);
+    setFare(value?.fare);
+    setCommissionAmount(value?.commissionAmount);
+    setDriverEarning(value?.driverEarning);
+  }, []);
 
   return (
     <View style={styles.container}>
+      <CancelComponent
+        visible={showCancelTab}
+        onClose={handleCancel}
+      ></CancelComponent>
       <Text style={styles.heading}>Trip Summary</Text>
       <View style={styles.row}>
         <Text style={styles.subText}>Distance: {distance}</Text>
@@ -136,18 +114,14 @@ export default function RideSummaryModal({
         {Object.entries(fares || {}).map(([item, value]) => (
           <TouchableOpacity
             key={item}
-            style={[
-              styles.option,
-              category === item && styles.selectedOption,
-              getOpacity(),
-            ]}
-            onPress={() => [setCategory(item), setFare(value)]}
-            disabled={id > 0}
+            style={[styles.option, category === item && styles.selectedOption]}
+            disabled={isDisabled()}
+            onPress={() => handleSelectCategory(item, value)}
           >
             <Ionicons
               name={"car-outline"}
               size={20}
-              color={category === item ? "#fff" : "#333"}
+              color={category === item ? "#333" : "grey"}
             />
             <Text
               style={[
@@ -158,72 +132,61 @@ export default function RideSummaryModal({
               {item}
             </Text>
             <Text
-              style={[
-                styles.fare,
-                category === item && styles.optionTextSelected,
-              ]}
+              style={[styles.fare, category === item && styles.fareSelected]}
             >
-              ₹{value}
+              ₹{value?.fare}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
-      {/* Payment Method */}
-      <Text style={styles.label}>Payment Method</Text>
-      <View style={styles.row}>
-        {paymentModes.map((method) => (
-          <TouchableOpacity
-            key={method}
-            style={[
-              styles.option,
-              paymentMethod === method && styles.selectedOption,
-              getOpacity(),
-            ]}
-            onPress={() => setPaymentMethod(method)}
-            disabled={id > 0}
-          >
+      <View style={styles.sectionSpace} />
+      <View style={styles.pillRow}>
+        <TouchableButton
+          style={styles.pill}
+          onPress={() =>
+            isDisabled() ? null : onShowBottomPanel("PAYMENT_METHOD")
+          }
+        >
+          <Text style={styles.pillIcon}>
             <Ionicons
               name={
-                method === "Cash"
+                paymentMethod === "Cash"
                   ? "cash-outline"
-                  : method === "UPI"
+                  : paymentMethod === "UPI"
                   ? "qr-code-outline"
                   : "card-outline"
               }
               size={22}
-              color={paymentMethod === method ? "#fff" : "#333"}
+              color={"#333"}
             />
-            <Text
-              style={[
-                styles.optionText,
-                paymentMethod === method && styles.optionTextSelected,
-              ]}
-            >
-              {method}
-            </Text>
-          </TouchableOpacity>
-        ))}
+          </Text>
+          <Text>{paymentMethod}</Text>
+        </TouchableButton>
+        <TouchableButton style={styles.pill}>
+          <Text style={styles.pillIcon}>
+            <Ionicons name={"person-outline"} size={22} color={"#333"} />
+          </Text>
+          <Text>Personal</Text>
+        </TouchableButton>
       </View>
 
-      {!id && (
-        <TouchableOpacity
-          style={[styles.button, getOpacity()]}
-          onPress={onConfirm}
-          disabled={id > 0 || !category || !fare}
+      {(!id || id === 0) && (
+        <TouchableButton
+          style={[commonStyles.button, isDisabled()]}
+          onPress={handleBookRide}
+          disabled={isDisabled()}
         >
-          <Text style={styles.buttonText}>Book Ride</Text>
-        </TouchableOpacity>
+          <Text style={commonStyles.buttonText}>Book Ride</Text>
+        </TouchableButton>
       )}
       {id > 0 &&
         ["REQUESTED", "PENDING", "ASSIGNED", "ACCEPTED"].includes(status) && (
-          <TouchableOpacity
-            style={[styles.button]}
-            onPress={() => {
-              handleAllCancel();
-            }}
+          <TouchableButton
+            style={[commonStyles.button]}
+            onPress={() => setShowCancelTab(true)}
           >
-            <Text style={styles.buttonText}>Cancel Ride</Text>
-          </TouchableOpacity>
+            <Text style={[commonStyles.buttonText]}>Cancel Ride</Text>
+          </TouchableButton>
         )}
     </View>
   );
@@ -246,7 +209,13 @@ const styles = StyleSheet.create({
   },
   heading: { fontSize: 18, fontWeight: "bold", marginBottom: 8 },
   subText: { fontSize: 15, color: "#555", marginBottom: 5, fontWeight: "500" },
-  fare: { fontSize: 12, color: "#555", marginBottom: 5 },
+  fare: {
+    fontSize: 12,
+    color: "#f0860dff",
+    marginBottom: 5,
+    fontWeight: "600",
+  },
+  fareSelected: { color: "#f01717ff" },
   label: { marginTop: 15, fontSize: 16, fontWeight: "500", marginBottom: 8 },
   row: {
     flexDirection: "row",
@@ -256,19 +225,22 @@ const styles = StyleSheet.create({
   option: {
     flex: 1,
     padding: 3,
-    backgroundColor: "#f2f2f2",
+    backgroundColor: "#fff",
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
+    borderColor: "#ff9900ff",
+    borderWidth: 1,
   },
-  selectedOption: { backgroundColor: "#007AFF" },
+  selectedOption: { backgroundColor: "#f8d678ff" },
   optionText: {
     marginTop: 5,
     fontSize: 12,
+    fontWeight: "600",
     color: "#333",
     textTransform: "capitalize",
   },
-  optionTextSelected: { color: "#fff" },
+  optionTextSelected: { color: "#000" },
   button: {
     marginTop: 10,
     backgroundColor: "#007AFF",
@@ -286,4 +258,24 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     backgroundColor: "#fff",
   },
+  pillRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 6,
+    marginBottom: 6,
+  },
+  pill: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#eee",
+    backgroundColor: "#fff",
+    marginHorizontal: 6,
+  },
+  pillIcon: { fontSize: 16 },
+  pillArrow: { fontSize: 12, color: "#aaa", marginTop: 2 },
+  sectionSpace: { height: 8 },
 });

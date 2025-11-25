@@ -5,6 +5,7 @@ const useMessageStore = create((set) => ({
   user: [],
   both: [],
   reasons: [],
+  rejectReasons: [],
 
   setMessages: (data) =>
     set({
@@ -12,6 +13,7 @@ const useMessageStore = create((set) => ({
       user: data.user || [],
       both: data.both || [],
       reasons: data.reasons || [],
+      rejectReasons: data.rejectReasons || [],
     }),
 }));
 export default useMessageStore;

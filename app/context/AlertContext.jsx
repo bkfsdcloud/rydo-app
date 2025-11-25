@@ -1,4 +1,10 @@
-import { createContext, useCallback, useContext, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useRef,
+  useState,
+} from "react";
 import { Modal, Text, TouchableOpacity, View } from "react-native";
 
 const AlertContext = createContext(null);
@@ -10,8 +16,12 @@ export const AlertProvider = ({ children }) => {
     message: "",
     leftButtonTitle: "Cancel",
     rightButtonTitle: "OK",
-    onLeftPress: null,
-    onRightPress: null,
+  });
+
+  // 🔥 Store callbacks in a ref to avoid freezes
+  const callbackRef = useRef({
+    onLeft: () => {},
+    onRight: () => {},
   });
 
   const hideAlert = useCallback(() => {
@@ -19,22 +29,27 @@ export const AlertProvider = ({ children }) => {
   }, []);
 
   const showAlert = useCallback((config) => {
-    setVisible(true);
+    // Save callbacks into ref (NOT state)
+    callbackRef.current = {
+      onLeft: config.onLeft || hideAlert,
+      onRight: config.onRight || hideAlert,
+    };
+
+    // Update only UI text, safe to store in state
     setOptions({
       title: config.title || "",
       message: config.message || "",
       leftButtonTitle: config.leftText || "Cancel",
       rightButtonTitle: config.rightText || "OK",
-      onLeftPress: config.onLeft || hideAlert,
-      onRightPress: config.onRight || hideAlert,
     });
+
+    setVisible(true);
   }, []);
 
   return (
     <AlertContext.Provider value={{ showAlert, hideAlert }}>
       {children}
 
-      {/* ALERT MODAL */}
       <Modal visible={visible} transparent animationType="fade">
         <View
           style={{
@@ -42,7 +57,6 @@ export const AlertProvider = ({ children }) => {
             backgroundColor: "rgba(0,0,0,0.5)",
             justifyContent: "center",
             alignItems: "center",
-            zIndex: 999,
           }}
         >
           <View
@@ -79,11 +93,10 @@ export const AlertProvider = ({ children }) => {
               </Text>
             ) : null}
 
-            {/* BUTTONS */}
             <View style={{ flexDirection: "row" }}>
               <TouchableOpacity
                 onPress={() => {
-                  options.onLeftPress();
+                  callbackRef.current.onLeft(); // SAFE callback
                   hideAlert();
                 }}
                 style={{
@@ -102,7 +115,7 @@ export const AlertProvider = ({ children }) => {
 
               <TouchableOpacity
                 onPress={() => {
-                  options.onRightPress();
+                  callbackRef.current.onRight(); // SAFE callback
                   hideAlert();
                 }}
                 style={{

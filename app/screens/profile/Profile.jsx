@@ -3,7 +3,6 @@ import { useNavigation } from "@react-navigation/native";
 import { useContext } from "react";
 import {
   FlatList,
-  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -37,13 +36,30 @@ export default function Profile() {
     if (route) navigation.navigate(route);
   };
 
+  function getColor(name) {
+    const colors = ["#6C63FF", "#FF6F91", "#FF9671", "#FFC75F", "#0089BA"];
+    const index = name.charCodeAt(0) % colors.length;
+    return colors[index];
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Image
-          source={{ uri: user?.avatarUrl || "https://i.pravatar.cc/100" }}
-          style={styles.avatar}
-        />
+        <View
+          style={[
+            styles.avatarContainer,
+            {
+              width: 50,
+              height: 50,
+              borderRadius: 50 / 2,
+              backgroundColor: getColor(user?.name),
+            },
+          ]}
+        >
+          <Text style={[styles.avatarText, { fontSize: 50 / 2 }]}>
+            {user?.name.charAt(0)}
+          </Text>
+        </View>
         <View style={{ marginLeft: 15 }}>
           <Text style={styles.name}>{user?.name}</Text>
           <Text style={styles.role}>+91 {user?.phone}</Text>
@@ -80,6 +96,15 @@ export default function Profile() {
 }
 
 const styles = StyleSheet.create({
+  avatarContainer: {
+    backgroundColor: "#6C63FF",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  avatarText: {
+    color: "white",
+    fontWeight: "bold",
+  },
   container: { flex: 1, backgroundColor: "#f9f9f9", padding: 20 },
   header: {
     flexDirection: "row",

@@ -1,6 +1,7 @@
+import TouchableButton from "@/app/component/TouchableButton";
 import { allTransactions, makeTransaction } from "@/scripts/api/miscApi";
 import { useEffect, useState } from "react";
-import { Alert, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, Text, TextInput, View } from "react-native";
 
 export default function PayFromWalletScreen({ navigation }) {
   const [amount, setAmount] = useState("");
@@ -28,8 +29,8 @@ export default function PayFromWalletScreen({ navigation }) {
     try {
       const res = await makeTransaction({
         amount: parseFloat(amount),
-        type: "DEBIT",
-        paymentMethod: "ADMIN_ADJUSTMENT",
+        type: "RIDE_PAYMENT",
+        paymentMethod: "WALLET",
       });
 
       if (res?.data) {
@@ -58,7 +59,8 @@ export default function PayFromWalletScreen({ navigation }) {
         value={amount}
         onChangeText={setAmount}
         placeholder="Enter amount"
-        keyboardType="numeric"
+        keyboardType="number-pad"
+        returnKeyType="done"
         style={{
           borderWidth: 1,
           borderColor: "#ccc",
@@ -68,8 +70,8 @@ export default function PayFromWalletScreen({ navigation }) {
         }}
       />
 
-      <TouchableOpacity
-        disabled={loading}
+      <TouchableButton
+        disabled={loading || balance < 0}
         onPress={handlePayment}
         style={{
           backgroundColor: "#007AFF",
@@ -82,7 +84,7 @@ export default function PayFromWalletScreen({ navigation }) {
         >
           {loading ? "Processing..." : "Pay Now"}
         </Text>
-      </TouchableOpacity>
+      </TouchableButton>
     </View>
   );
 }

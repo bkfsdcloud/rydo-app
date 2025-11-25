@@ -12,7 +12,7 @@ export default function DrawerScreens() {
   const getTabs = () => {
     console.log("Role : ", user?.role);
     switch (user?.role) {
-      case "CUSTOMER":
+      case "RIDER":
         return RiderStacks;
       case "DRIVER":
         return DriverStacks;

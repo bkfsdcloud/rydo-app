@@ -1,3 +1,6 @@
+import CancelComponent from "@/app/component/CancelComponent";
+import RatingComponent from "@/app/component/RatingComponent";
+
 import { useAlert } from "@/app/context/AlertContext";
 import { Ionicons } from "@expo/vector-icons";
 import polylineTool from "@mapbox/polyline";
@@ -10,7 +13,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Alert, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, Text, TouchableOpacity, View } from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
 import Animated, {
   useAnimatedStyle,
@@ -34,7 +37,6 @@ export default function DriverHome() {
   const navigation = useNavigation();
   const {
     id,
-    setId,
     origin,
     setOrigin,
     destination,
@@ -43,65 +45,64 @@ export default function DriverHome() {
     setDistance,
     setDuration,
     fare,
-    setFare,
-    distanceKm,
     setDistanceKm,
     setDurationMin,
     status,
     setStatus,
     resetRide,
+    setId,
+    driverEarning,
+    riderId,
+    setRiderId,
+    driverId,
+    setDriverId,
   } = useRideStore();
 
   const [dutyStatus, setDutyStatus] = useState("AVAILABLE");
   const mapRef = useRef(null);
-  const [reason, setReason] = useState("");
-  const [showReason, setShowReason] = useState(false);
   const [localPolyline, setLocalPolyline] = useState([]);
-  // const [showAlert, setShowAlert] = useState(false);
-  const [tempLocation, setTempLocation] = useState({
-    description: "",
-    coords: null,
-  });
   const [steps, setSteps] = useState([]);
-  const { showAlert, hideAlert } = useAlert();
+  const { showAlert } = useAlert();
+  const [showCancelTab, setShowCancelTab] = useState(false);
 
   const sheetRef = useRef(null);
   const [closablePan, setClosablePan] = useState(false);
   const [bottomView, setBottomView] = useState("DEFAULT");
+
+  const tempLocation = useRef(null);
+  const originRef = useRef(null);
+  const destinationRef = useRef(null);
 
   const sheetY = useSharedValue(0);
   const floatingStyle = useAnimatedStyle(() => {
     return {
       transform: [
         {
-          translateY: withTiming(-sheetY.get() - 50),
+          translateY: withTiming(-sheetY.get() - 30),
         },
       ],
     };
   });
 
   useEffect(() => {
-    // setDefault();
     if (status === "PENDING") {
       showAlert({
         title: "Ride Request!",
-        message: `Total distance : ${distance} km Estimated Fare ₹${fare}`,
+        message: `Distance : ${distance}km Estimated Fare ₹${fare} Earnings: ₹${driverEarning}`,
         leftText: "Reject",
         rightText: "Accept",
-        onLeft: () => handleCancel,
-        onRight: () => handleConfirm,
+        onLeft: handleReject,
+        onRight: handleConfirm,
       });
-      setShowReason(true);
     } else if (status === "ASSIGNED" && localPolyline?.length === 0) {
-      setTempLocation({
-        description: "You are here",
-        coords: { lat: location.lat, lng: location.lng },
-      });
+      setRoutePositions();
       handleRoute(status);
     } else if (status === "ONGOING" && !localPolyline?.length) {
+      setRoutePositions();
+      tempLocation.current = null;
       handleRoute(status);
     }
-  }, [status, distanceKm, fare]);
+  }, []);
 
   const setDefault = () => {
     setBottomView("DEFAULT");
@@ -109,43 +110,73 @@ export default function DriverHome() {
     sheetRef.current?.expand();
   };
 
-  const handleConfirm = async () => {
-    hideAlert();
-    const res = await updateStatus({
-      rideData: { id: id, status: "ACCEPTED" },
-    });
-    if (res?.data) {
-      setStatus(res?.data.status);
-      handleRoute(res?.data.status);
-    }
-  };
-
-  const handleCancel = async () => {
-    hideAlert();
-    setShowReason(false);
-    const res = await updateStatus({
-      rideData: { id: id, reason, status: "REJECTED" },
-    });
-    if (res?.data) {
-      setStatus(null);
-      setTempLocation({});
-      resetRide();
-      setLocalPolyline([]);
-    }
-  };
-
-  const handleToPickup = async (status) => {
-    if (status) {
-      await updateStatus({
-        rideData: { id: id, status: status },
+  const handleConfirm = useCallback(
+    async (rideInfo) => {
+      const res = await updateStatus({
+        rideData: { id: rideInfo?.id || id, status: "ACCEPTED" },
       });
-      setStatus(status);
-      setTempLocation({});
+
+      if (res?.data) {
+        setStatus(res?.data.status);
+        setRoutePositions(rideInfo);
+        handleRoute(res?.data.status);
+      }
+    },
+    [id, origin, destination]
+  );
+
+  const resetRef = () => {
+    tempLocation.current = null;
+    originRef.current = null;
+    destinationRef.current = null;
+  };
+
+  const setRoutePositions = (rideInfo) => {
+    tempLocation.current = tempLocation.current || {
+      description: "You are here",
+      coords: { lat: location.lat, lng: location.lng },
+    };
+    if (rideInfo) {
+      originRef.current = {
+        description: rideInfo?.pickupLocation,
+        coords: {
+          lat: rideInfo?.pickupLat,
+          lng: rideInfo?.pickupLng,
+        },
+      };
+      destinationRef.current = {
+        description: rideInfo?.dropLocation,
+        coords: {
+          lat: rideInfo?.dropLat,
+          lng: rideInfo?.dropLng,
+        },
+      };
+    } else {
+      originRef.current = origin;
+      destinationRef.current = destination;
     }
   };
 
-  const handleStart = async () => {
-    setTempLocation({});
+  const handleReject = useCallback(async (rideInfo) => {
+    setShowCancelTab(true);
+    setId(rideInfo?.id);
+  }, []);
+
+  const handleToPickup = useCallback(
+    async (status) => {
+      if (status) {
+        await updateStatus({
+          rideData: { id: id, status: status },
+        });
+        setStatus(status);
+        tempLocation.current = null;
+      }
+    },
+    [id]
+  );
+
+  const handleStart = useCallback(async () => {
+    tempLocation.current = null;
     const res = await updateStatus({
       rideData: { id: id, status: "ONGOING" },
     });
@@ -153,17 +184,24 @@ export default function DriverHome() {
       setStatus(res?.data.status);
       handleRoute(res?.data.status);
     }
-  };
+  }, [id]);
 
-  const handleComplete = async () => {
+  const handleComplete = useCallback(async () => {
     const res = await updateStatus({
       rideData: { id: id, status: "COMPLETED", finalFare: fare },
     });
     if (res?.data) {
-      resetRide();
-      setLocalPolyline([]);
+      if (res?.data?.riderId) {
+        setRiderId(res?.data?.riderId);
+      }
+      if (res?.data?.driverId) {
+        setDriverId(res?.data?.driverId);
+      }
+      setBottomView("RATE");
+      setClosablePan(true);
+      sheetRef.current?.expand();
     }
-  };
+  }, [id, fare]);
 
   useEffect(() => {
     addListener(handleMessage);
@@ -174,27 +212,17 @@ export default function DriverHome() {
 
   const handleMessage = (parsed) => {
     if (parsed?.event === "sendMessage") return;
-    console.log("📨 Notification from the rider:", parsed);
-    if (parsed?.data) {
-      setId(parsed?.data?.id);
-      setStatus(parsed?.data?.status);
-      setFare(parsed.data?.fareEstimated);
-
+    const data = parsed?.data;
+    console.log("📨 Notification from the rider:", data);
+    if (data) {
+      setId(data?.id);
       showAlert({
         title: parsed.message,
-        message: `Total distance : ${parsed.data?.distance} KM. Estimated Fare ₹${parsed.data?.fareEstimated}`,
+        message: `Distance : ${data?.distanceKm} km. Estimated Fare ₹${data?.fareEstimated} Earnings: ₹${data?.driverEarning}`,
         leftText: "Reject",
         rightText: "Accept",
-        onLeft: () => handleCancel,
-        onRight: () => handleConfirm,
-      });
-      setOrigin({
-        description: parsed?.data.pickupLocation,
-        coords: { lat: parsed?.data?.pickupLat, lng: parsed?.data?.pickupLng },
-      });
-      setDestination({
-        description: parsed?.data.dropLocation,
-        coords: { lat: parsed?.data?.dropLat, lng: parsed?.data?.dropLng },
+        onLeft: () => handleReject(data),
+        onRight: () => handleConfirm(data),
       });
     } else {
       resetRide();
@@ -203,18 +231,21 @@ export default function DriverHome() {
   };
 
   const handleRoute = async (status) => {
+    console.log("status: ", status);
+    console.log("tempLocation: ", tempLocation.current);
+    console.log("origin: ", originRef.current);
+    console.log("destination: ", destinationRef.current);
     const res = await handleGetRoute({
-      origin:
-        status === "ASSIGNED"
-          ? `${tempLocation.coords ? tempLocation.coords.lat : location.lat},${
-              tempLocation.coords ? tempLocation.coords.lng : location.lng
-            }`
-          : `${origin.coords.lat},${origin.coords.lng}`,
-      destination:
-        status === "ASSIGNED"
-          ? `${origin.coords.lat},${origin.coords.lng}`
-          : `${destination.coords.lat},${destination.coords.lng}`,
+      origin: tempLocation.current
+        ? `${tempLocation.current?.coords?.lat},${tempLocation.current?.coords?.lng}`
+        : `${originRef.current?.coords?.lat},${originRef.current?.coords?.lng}`,
+      destination: tempLocation.current
+        ? `${originRef.current?.coords?.lat},${originRef.current?.coords?.lng}`
+        : `${destinationRef.current?.coords?.lat},${destinationRef.current?.coords?.lng}`,
     });
+
+    setOrigin({ description: res?.start_address, coords: res?.start_coords });
+    setDestination({ description: res?.end_address, coords: res?.end_coords });
 
     setSteps(res.steps);
     const coordinates = [];
@@ -225,20 +256,37 @@ export default function DriverHome() {
       );
     }
     setLocalPolyline(coordinates);
+
     setDistance(res.distance);
     setDuration(res.duration);
     setDistanceKm(res.distanceKm);
     setDurationMin(res.durationMin);
   };
 
+  const handleCancel = useCallback(
+    async (ack) => {
+      setShowCancelTab(false);
+      if (ack) {
+        resetRide();
+        resetRef();
+        setLocalPolyline(null);
+      }
+    },
+    [resetRide]
+  );
+
   const regions = useMemo(
     () => ({
-      latitude: location.lat,
-      longitude: location.lng,
+      latitude: tempLocation.current
+        ? tempLocation.current.coords?.lat
+        : location.lat,
+      longitude: tempLocation.current
+        ? tempLocation.current.coords?.lng
+        : location.lng,
       latitudeDelta: 0.003,
       longitudeDelta: 0.003,
     }),
-    [location]
+    [location.lat, location.lng]
   );
 
   const originMarkerCb = useMemo(() => {
@@ -247,54 +295,39 @@ export default function DriverHome() {
       <Marker
         anchor={{ x: 0.5, y: 0.5 }}
         pinColor="green"
-        icon={
-          <Ionicons
-            name="radio-button-on-outline"
-            size={20}
-            color={"green"}
-          ></Ionicons>
-        }
+        tracksViewChanges={false}
         coordinate={{
-          latitude: tempLocation?.coords
-            ? tempLocation?.coords?.lat
-            : origin.coords.lat,
-          longitude: tempLocation?.coords
-            ? tempLocation?.coords?.lng
-            : origin.coords.lng,
+          latitude: origin.coords.lat,
+          longitude: origin.coords.lng,
         }}
-        title={tempLocation.description || origin.description}
-        titleVisibility="visible"
-      />
+        title={origin.description}
+      >
+        <View style={{ justifyContent: "center", alignItems: "center" }}>
+          <Ionicons name="radio-button-on-outline" size={20} color="green" />
+        </View>
+      </Marker>
     );
-  }, [tempLocation, origin.coords]);
+  }, [origin]);
 
   const destMarkerCb = useMemo(() => {
-    if (!origin.coords && !destination.coords) return null;
+    if (!destination.coords) return null;
     return (
       <Marker
         pinColor="red"
-        icon={
-          <Ionicons
-            name="radio-button-on-outline"
-            size={20}
-            color={"red"}
-          ></Ionicons>
-        }
         anchor={{ x: 0.5, y: 0.5 }}
+        tracksViewChanges={false}
         coordinate={{
-          latitude: tempLocation?.coords
-            ? origin.coords.lat
-            : destination.coords && destination.coords.lat,
-          longitude: tempLocation?.coords
-            ? origin.coords.lng
-            : destination.coords && destination.coords.lng,
+          latitude: destination.coords.lat,
+          longitude: destination.coords.lng,
         }}
-        title={
-          tempLocation?.coords ? origin.description : destination.description
-        }
-      />
+        title={destination.description}
+      >
+        <View style={{ justifyContent: "center", alignItems: "center" }}>
+          <Ionicons name="radio-button-on-outline" size={20} color="red" />
+        </View>
+      </Marker>
     );
-  }, [tempLocation.coords, origin.coords, destination.coords]);
+  }, [destination]);
 
   const polyLineCb = useMemo(() => {
     if (!localPolyline?.length) return null;
@@ -324,13 +357,13 @@ export default function DriverHome() {
             category: "standard",
           },
         });
-        setTempLocation({
+        tempLocation.current = {
           description: "You are here",
           coords: { lat: newRegion.latitude, lng: newRegion.longitude },
-        });
+        };
       }
     },
-    [id]
+    [id, sendMessage]
   );
 
   const recentreCurrentLocation = useCallback(() => {
@@ -340,9 +373,9 @@ export default function DriverHome() {
       latitudeDelta: 0.003,
       longitudeDelta: 0.003,
     });
-  }, []);
+  }, [location]);
 
-  const toggleDuty = () => {
+  const toggleDuty = useCallback(() => {
     const status = dutyStatus === "AVAILABLE" ? "INACTIVE" : "AVAILABLE";
     setDutyStatus(status);
     sendMessage({
@@ -351,20 +384,13 @@ export default function DriverHome() {
         status,
       },
     });
-  };
+  }, [dutyStatus, sendMessage]);
   return (
     <>
-      {showReason && (
-        <TextInput
-          placeholder="Reason for cancelling"
-          placeholderTextColor={"grey"}
-          onChangeText={(text) => {
-            setReason(text);
-          }}
-          style={[commonStyles.input, { marginBottom: 10 }]}
-        ></TextInput>
-      )}
-
+      <CancelComponent
+        visible={showCancelTab}
+        onClose={handleCancel}
+      ></CancelComponent>
       <View style={commonStyles.overlayContainer}>
         <TouchableOpacity
           style={commonStyles.overlayIcon}
@@ -399,7 +425,7 @@ export default function DriverHome() {
           provider="google"
           showsUserLocation={true}
           showsMyLocationButton={false}
-          initialRegion={regions}
+          region={regions}
           onRegionChangeComplete={(newRegion, { isGesture }) =>
             onRegionChangeCompleteCb(newRegion, isGesture)
           }
@@ -421,24 +447,24 @@ export default function DriverHome() {
             floatingStyle,
           ]}
         >
-          <TouchableOpacity
-            style={{
-              backgroundColor: "#fff",
-              borderRadius: "50%",
-              padding: 10,
-              alignSelf: "flex-end",
-            }}
-            onPress={() =>
-              navigation.navigate("CarNavigation", { steps: steps })
-            }
-          >
-            <Ionicons
-              name="navigate-outline"
-              size={22}
-              color={"#000"}
-              style={{}}
-            ></Ionicons>
-          </TouchableOpacity>
+          {steps?.length > 0 && (
+            <TouchableOpacity
+              style={{
+                backgroundColor: "#fff",
+                borderRadius: "50%",
+                padding: 10,
+                alignSelf: "flex-end",
+              }}
+              onPress={() => navigation.navigate("CarNavigation", { steps })}
+            >
+              <Ionicons
+                name="navigate-outline"
+                size={22}
+                color={"#000"}
+                style={{}}
+              ></Ionicons>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             style={{
               backgroundColor: "#fff",
@@ -500,7 +526,9 @@ export default function DriverHome() {
                     handleToPickup("ARRIVED");
                   }}
                 >
-                  <Text style={commonStyles.buttonText}>Reached Pickup</Text>
+                  <Text style={commonStyles.buttonText}>
+                    Reached Pickup Point
+                  </Text>
                 </TouchableOpacity>
               )}
               {status === "ARRIVED" && (
@@ -523,10 +551,46 @@ export default function DriverHome() {
                   <Text style={commonStyles.buttonText}>Complete Ride</Text>
                 </TouchableOpacity>
               )}
+              {!status && (
+                <TouchableOpacity
+                  style={[
+                    commonStyles.button,
+                    {
+                      backgroundColor:
+                        dutyStatus === "AVAILABLE" ? "grey" : "green",
+                    },
+                  ]}
+                  onPress={toggleDuty}
+                >
+                  <Text style={commonStyles.buttonText}>
+                    {dutyStatus === "AVAILABLE" ? "Duty Off" : "Duty On"}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              {["ASSIGNED", "ARRIVED"].includes(status) && (
+                <TouchableOpacity
+                  style={[commonStyles.button, { backgroundColor: "red" }]}
+                  onPress={() => setShowCancelTab(true)}
+                >
+                  <Text style={commonStyles.buttonText}>Cancel Ride</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         )}
         {bottomView === "CHAT" && <ChatScreen></ChatScreen>}
+        {bottomView === "RATE" && (
+          <RatingComponent
+            rideId={id}
+            riderId={riderId}
+            driverId={driverId}
+            onClose={() => {
+              setDefault();
+              resetRide();
+              setLocalPolyline([]);
+            }}
+          ></RatingComponent>
+        )}
       </BottomPanel>
     </>
   );

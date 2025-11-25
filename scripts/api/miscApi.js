@@ -38,9 +38,10 @@ export const createWallet = async (body) => {
   return response.data;
 };
 
-export const allTransactions = async () => {
+export const allTransactions = async (config) => {
   const response = await api.get(
-    "https://ohtryxvm9b.execute-api.ap-south-1.amazonaws.com/dev/api/v1/rydo/wallet/transaction"
+    "https://ohtryxvm9b.execute-api.ap-south-1.amazonaws.com/dev/api/v1/rydo/wallet/transaction",
+    config
   );
   return response.data;
 };

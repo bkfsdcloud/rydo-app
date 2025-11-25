@@ -11,18 +11,21 @@ import {
 import { rateRide } from "../../scripts/api/miscApi";
 import AuthContext from "../context/AuthContext";
 import useMessageStore from "../store/useMessageStore";
-import { useRideStore } from "../store/useRideStore";
-import useUserStore from "../store/useUserStore";
 
-export default function RatingComponent({ onClose }) {
+export default function RatingComponent({
+  rideId,
+  riderId,
+  driverId,
+  onClose,
+}) {
   const [rating, setRating] = useState(0);
   const [selectedMessages, setSelectedMessages] = useState([]);
   const [feedback, setFeedback] = useState("");
 
   const { user: userInfo } = useContext(AuthContext);
   const { both, driver, user } = useMessageStore();
-  const { id, driverId, riderId } = useRideStore();
-  const { rideInfo } = useUserStore();
+  // const { id, driverId, riderId } = useRideStore();
+  // const { rideInfo } = useUserStore();
 
   const filteredMessages = [
     ...both,
@@ -36,16 +39,15 @@ export default function RatingComponent({ onClose }) {
   };
 
   const onSubmit = async () => {
-    const response = await rateRide({
-      rideId: rideInfo?.rideId || id,
-      ratedId:
-        user?.role === "DRIVER"
-          ? rideInfo?.riderId || riderId
-          : rideInfo?.driverId || driverId,
+    const body = {
+      rideId: rideId,
+      ratedId: user?.role === "DRIVER" ? riderId : driverId,
       rating,
       feedback,
       messages: selectedMessages,
-    });
+    };
+    console.log("Rating body : ", body);
+    const response = await rateRide(body);
     if (response?.data) {
       onClose();
       // Alert.alert("Info", response?.message);
@@ -106,13 +108,7 @@ export default function RatingComponent({ onClose }) {
       />
 
       <TouchableOpacity
-        onPress={() =>
-          onSubmit({
-            rating,
-            selectedMessages,
-            feedback,
-          })
-        }
+        onPress={onSubmit}
         style={{
           marginTop: 20,
           padding: 14,

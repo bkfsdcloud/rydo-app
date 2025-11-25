@@ -1,42 +1,23 @@
-import { createContext, useEffect, useState } from "react";
-import { setLoadingRef } from "../../scripts/loadingRef";
+import { createContext, useContext, useEffect, useState } from "react";
 
 const LoadingContext = createContext();
 
 export const LoadingProvider = ({ children }) => {
-  // const [loading, setLoading] = useState(false);
-
-  const [loadingState, setLoadingState] = useState({
-    visible: false,
-    message: "",
-    button: "",
-    callback: null,
-  });
-
-  const showLoading = (
-    message = "Loading...",
-    button = null,
-    callback = null
-  ) => {
-    setLoadingState({ visible: true, message, button, callback });
-  };
-
-  const hideLoading = () => {
-    setLoadingState({
-      visible: false,
-      message: "",
-      button: "",
-      callback: null,
-    });
-  };
+  const [loadingCount, setLoadingCount] = useState(0);
 
   useEffect(() => {
-    setLoadingRef({ ...loadingState, showLoading, hideLoading });
+    LoadingController.register({
+      startLoading,
+      stopLoading,
+    });
   }, []);
+
+  const startLoading = () => setLoadingCount((prev) => prev + 1);
+  const stopLoading = () => setLoadingCount((prev) => Math.max(prev - 1, 0));
 
   return (
     <LoadingContext.Provider
-      value={{ ...loadingState, showLoading, hideLoading }}
+      value={{ loadingCount, startLoading, stopLoading }}
     >
       {children}
     </LoadingContext.Provider>
@@ -44,3 +25,12 @@ export const LoadingProvider = ({ children }) => {
 };
 
 export default LoadingContext;
+export const useLoading = () => useContext(LoadingContext);
+
+let actions = null;
+
+export const LoadingController = {
+  register: (obj) => (actions = obj),
+  start: () => actions?.startLoading(),
+  stop: () => actions?.stopLoading(),
+};

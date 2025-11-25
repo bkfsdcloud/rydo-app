@@ -112,11 +112,12 @@ export const commonStyles = StyleSheet.create({
     fontSize: 12,
   },
   button: {
-    backgroundColor: "#007BFF",
+    backgroundColor: "#be1414ff",
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: "center",
     padding: 10,
+    marginTop: 5,
     flex: 1,
   },
   buttonText: {
@@ -172,4 +173,50 @@ export const commonStyles = StyleSheet.create({
   disabled: {
     backgroundColor: "#f3f2f2ff",
   },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginVertical: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  cardLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  iconBg: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  cardText: {
+    justifyContent: "center",
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  cardSubtitle: {
+    fontSize: 12,
+    color: "#757575",
+    marginTop: 2,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    color: "#7a7a7a",
+    marginTop: 16,
+    marginBottom: 8,
+    letterSpacing: 1.2,
+  },
+  cardBorder: { borderWidth: 1, borderColor: "grey" },
 });

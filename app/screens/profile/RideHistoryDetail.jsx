@@ -3,7 +3,7 @@ import AuthContext from "@/app/context/AuthContext";
 import useUserStore from "@/app/store/useUserStore";
 import { Ionicons } from "@expo/vector-icons";
 import moment from "moment";
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -11,13 +11,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { rateRide } from "../../../scripts/api/miscApi";
 import { rideHistoryDetails } from "../../../scripts/api/riderApi";
 import RatingComponent from "../../component/RatingComponent";
 
 export default function RideHistoryDetail() {
-  const [rating, setRating] = useState(0);
-  const [feedback, setFeedback] = useState("");
   const modalRef = React.useRef(null);
   const { user: userInfo } = useContext(AuthContext);
   const { rideInfo, setRideInfo } = useUserStore();
@@ -26,16 +23,19 @@ export default function RideHistoryDetail() {
     modalRef.current?.close();
   }, []);
 
+  const isDriver = () => userInfo?.role === "DRIVER";
+
   const open = () => modalRef.current?.expand();
   const close = () => modalRef.current?.close();
   const getFeedback = () =>
-    userInfo?.role === "DRIVER"
-      ? rideInfo.driver_feedback
-      : rideInfo.user_feedback;
+    isDriver() ? rideInfo.driver_feedback : rideInfo.user_feedback;
+  const getRating = () =>
+    isDriver() ? rideInfo.driver_rating : rideInfo.user_rating;
 
   const bgColorMap = {
     COMPLETED: "#d7f6e0",
     CANCELLED: "#f7d7d7ff",
+    REJECTED: "#f7d7d7ff",
     ONGOING: "#f3f2cfff",
     ASSIGNED: "#f3f2cfff",
     REQUESTED: "#f3f2cfff",
@@ -43,28 +43,10 @@ export default function RideHistoryDetail() {
   const colorMap = {
     COMPLETED: "#0a7a3a",
     CANCELLED: "#810d0dff",
+    REJECTED: "#810d0dff",
     ONGOING: "#7a790dff",
     ASSIGNED: "#7a790dff",
     REQUESTED: "#7a790dff",
-  };
-
-  const handleRating = async (value) => {
-    setRating(value);
-    const body = {
-      rideId: rideInfo?.rideId,
-      ratedId:
-        userInfo?.role === "DRIVER" ? rideInfo?.riderId : rideInfo?.driverId,
-      rating: value,
-      feedback,
-    };
-    const response = await rateRide(body);
-    if (response?.data) {
-      const details = await rideHistoryDetails({
-        rideId: rideInfo.rideId,
-      });
-      setRideInfo(details.data[0]);
-    }
-    close();
   };
 
   return (
@@ -81,7 +63,7 @@ export default function RideHistoryDetail() {
                   "ddd, MMM DD YYYY HH:mm A"
                 )}
               </Text>
-              <Text style={styles.fare}>₹102 (est)</Text>
+              <Text style={styles.fare}>₹{rideInfo.fare_estimated} (est)</Text>
             </View>
             <View style={styles.topRight}>
               <Text style={styles.icon}>🚗</Text>
@@ -154,19 +136,12 @@ export default function RideHistoryDetail() {
             /> */}
             <Text style={styles.ratingTitle}>Rating</Text>
             <View style={styles.ratingInfo}>
-              <TouchableOpacity
-                onPress={open}
-                disabled={rideInfo.user_rating > 0}
-              >
+              <TouchableOpacity onPress={open} disabled={getRating() > 0}>
                 <View style={styles.starsRow}>
                   {Array.from({ length: 5 }).map((val, idx) => (
                     <Ionicons
                       key={idx}
-                      name={
-                        rideInfo.user_rating >= idx + 1
-                          ? "star"
-                          : "star-outline"
-                      }
+                      name={getRating() >= idx + 1 ? "star" : "star-outline"}
                       size={36}
                       color={"green"}
                       style={{ marginRight: 8 }}
@@ -181,14 +156,20 @@ export default function RideHistoryDetail() {
         <Text style={styles.sectionTitle}>Ride Summary</Text>
         <View style={styles.summaryCard}>
           <View style={styles.row}>
-            <Text style={styles.label}>Suggested Fare</Text>
-            <Text style={styles.value}>₹{rideInfo.fare_estimated}</Text>
-          </View>
-          <View style={styles.dividerThin} />
-          <View style={styles.row}>
             <Text style={styles.totalLabel}>Total Amount</Text>
             <Text style={styles.totalValue}>₹{rideInfo.fare_estimated}</Text>
           </View>
+          {isDriver() && (
+            <>
+              <View style={styles.dividerThin} />
+              <View style={styles.row}>
+                <Text style={styles.label}>Your Earnings</Text>
+                <Text style={styles.value}>
+                  ₹{rideInfo?.driverEarning || 0}
+                </Text>
+              </View>
+            </>
+          )}
 
           <TouchableOpacity style={styles.emailRow}>
             <Text style={styles.emailIcon}>✉️</Text>
@@ -198,11 +179,16 @@ export default function RideHistoryDetail() {
       </ScrollView>
       <BottomPanel
         detached={false}
+        enablePanClose={true}
         ref={modalRef}
         index={-1}
         backgroundStyle={{ borderRadius: 24 }}
+        onClose={close}
       >
         <RatingComponent
+          rideId={rideInfo.rideId}
+          driverId={rideInfo.driverId}
+          riderId={rideInfo.riderId}
           onClose={async () => {
             const details = await rideHistoryDetails({
               rideId: rideInfo.rideId,

@@ -1,8 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { Alert } from "react-native";
+import { LoadingController } from "../../app/context/LoadingContext";
 import { API_URL } from "../constants";
-import { getLoadingRef } from "../loadingRef";
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -47,6 +47,7 @@ ErrorUtils.setGlobalHandler((error, isFatal) => {
   console.log("Global JS Error:", error);
 
   if (isFatal) {
+    LoadingController.stop();
     Alert.alert(
       "Unexpected error occurred",
       `
@@ -63,29 +64,36 @@ ErrorUtils.setGlobalHandler((error, isFatal) => {
 
 api.interceptors.request.use(
   async (config) => {
-    getLoadingRef().showLoading();
+    if (!config?.skipGlobalLoader) {
+      LoadingController.start();
+    }
     const token = await AsyncStorage.getItem("userToken");
     if (token) {
-      console.log("Added token");
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
   (error) => {
-    getLoadingRef().hideLoading(false);
+    if (!error.config?.skipGlobalLoader) {
+      LoadingController.stop();
+    }
     return Promise.reject(error);
   }
 );
 
 api.interceptors.response.use(
   (response) => {
+    if (!response.config?.skipGlobalLoader) {
+      LoadingController.stop();
+    }
     console.log("response => ", response?.data);
-    getLoadingRef().hideLoading();
     return response;
   }, // Pass successful responses
   async (error) => {
-    console.log("error => ", error.code);
-    getLoadingRef().hideLoading();
+    if (!error.config?.skipGlobalLoader) {
+      LoadingController.stop();
+    }
+    console.log("error => ", error.code, error?.message);
 
     if (error.response) {
       console.log("error response => ", error.response.data);
