@@ -116,6 +116,7 @@ export default function RideBooking() {
   }, [id, localPolyline]);
 
   useEffect(() => {
+    console.log("status", status);
     addListener(handleMessage);
     return () => {
       removeListener(handleMessage);
@@ -256,6 +257,7 @@ export default function RideBooking() {
 
   return (
     <View style={styles.container}>
+      <SearchingModal></SearchingModal>
       <View style={commonStyles.overlayContainer}>
         <TouchableOpacity
           style={commonStyles.overlayIcon}
@@ -363,10 +365,6 @@ export default function RideBooking() {
           )}
         </View>
       </Animated.View>
-
-      <SearchingModal
-        visible={status === "PENDING" || status === "REQUESTED"}
-      ></SearchingModal>
 
       <BottomPanel
         enablePanClose={closablePan}

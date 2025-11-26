@@ -42,7 +42,6 @@ const VerifyOtpScreen = () => {
     if (timerRef.current) return;
     timeValueRef.current = 30;
     timerRef.current = setInterval(() => {
-      console.log("time now ", timeValueRef.current);
       if (timeValueRef.current > 0) {
         timeValueRef.current -= 1;
         setTime(timeValueRef.current);
@@ -81,7 +80,11 @@ const VerifyOtpScreen = () => {
   const triggerOtp = async () => {
     try {
       startTimer();
-      await genOtp(phone);
+      const response = await genOtp(phone);
+      if (response.data.message) {
+        setOtp(["", "", "", "", "", ""]);
+        Alert.alert("Infomation", response.data.message);
+      }
     } catch (error) {
       console.log(error);
     }
@@ -93,7 +96,6 @@ const VerifyOtpScreen = () => {
 
   const verifyOtpInt = async () => {
     try {
-      console.log("phone ", phone, otp);
       const response = await verifyOtp(phone, getOtpValue());
       if (response.data?.token) {
         await saveToken(response.data);
@@ -140,7 +142,7 @@ const VerifyOtpScreen = () => {
           disabled={time !== 0}
           onPress={triggerOtp}
         >
-          <Text style={commonStyles.buttonText}>
+          <Text style={styles.buttonText}>
             Resend OTP {time > 0 ? `(${time}s)` : ""}
           </Text>
         </TouchableButton>
@@ -149,7 +151,7 @@ const VerifyOtpScreen = () => {
           disabled={getOtpValue()?.length !== 6}
           onPress={verifyOtpInt}
         >
-          <Text style={commonStyles.buttonText}>Verify OTP</Text>
+          <Text style={styles.buttonText}>Verify OTP</Text>
         </TouchableButton>
       </View>
     </View>
@@ -193,18 +195,18 @@ const styles = StyleSheet.create({
   },
   otpRow: {
     marginTop: 18,
-    marginHorizontal: 16,
+    marginHorizontal: 10,
     flexDirection: "row",
-    justifyContent: "space-between",
   },
   otpBox: {
-    width: 54,
-    height: 54,
+    width: 45,
+    height: 50,
     borderRadius: 8,
     backgroundColor: "#f2f2f2",
     textAlignVertical: "center",
     textAlign: "center",
-    fontSize: 22,
+    marginHorizontal: 5,
+    fontSize: 20,
     color: "#000",
   },
   bottomSpacer: {
@@ -244,5 +246,10 @@ const styles = StyleSheet.create({
   btnRedText: {
     color: "#fff",
     fontWeight: "600",
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "500",
+    fontSize: 12,
   },
 });

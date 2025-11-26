@@ -225,6 +225,7 @@ export default function DriverHome() {
     console.log("📨 Notification from the rider:", data);
     if (data) {
       setId(data?.id);
+      setStatus(data?.status);
       showAlert({
         title: parsed.message,
         message: `Distance : ${data?.distanceKm} km. Estimated Fare ₹${data?.fareEstimated} Earnings: ₹${data?.driverEarning}`,
@@ -360,6 +361,7 @@ export default function DriverHome() {
           details: {
             vehicleType: user?.driver?.vehicle?.type,
             category: user?.driver?.vehicle?.category,
+            status: dutyStatus,
           },
         });
         tempLocation.current = {

@@ -10,7 +10,7 @@ import TouchableButton from "./TouchableButton";
 export default function SearchingModal({ visible }) {
   const navigation = useNavigation();
   const [showCancelTab, setShowCancelTab] = useState(false);
-  const { resetRide } = useRideStore();
+  const { resetRide, status } = useRideStore();
 
   const handleCancel = useCallback(
     async (ack) => {
@@ -24,7 +24,7 @@ export default function SearchingModal({ visible }) {
   );
 
   return (
-    <Modal visible={visible} transparent>
+    <Modal visible={status === "PENDING" || status === "REQUESTED"} transparent>
       <CancelComponent
         visible={showCancelTab}
         onClose={handleCancel}
@@ -38,7 +38,7 @@ export default function SearchingModal({ visible }) {
           padding: 10,
         }}
       >
-        <Text style={{ fontSize: 20, marginBottom: 12 }}>
+        <Text style={{ fontSize: 20, marginBottom: 12, color: "#fff" }}>
           Searching for drivers...
         </Text>
 
