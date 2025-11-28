@@ -20,6 +20,7 @@ export default function LocationInput({
   ref,
   searchFor,
   onAddFavourite,
+  loading,
 }) {
   const { favourites } = useUserStore();
   const { origin, destination } = useRideStore();

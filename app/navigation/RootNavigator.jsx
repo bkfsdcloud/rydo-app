@@ -7,6 +7,7 @@ import AuthContext from "../context/AuthContext";
 import AuthStack from "../navigation/auth/AuthStack";
 import DrawerScreens from "../screens/DrawerScreen";
 import ChatScreen from "../screens/profile/ChatScreen";
+import EditProfile from "../screens/profile/EditProfile";
 import Favorites from "../screens/profile/Favorites";
 import Notifications from "../screens/profile/Notifications";
 import Payments from "../screens/profile/Payments";
@@ -59,6 +60,13 @@ export default function RootNavigator() {
             component={Profile}
             options={{
               title: "Profile",
+            }}
+          />
+          <Stack.Screen
+            name="EditProfile"
+            component={EditProfile}
+            options={{
+              title: "Edit Profile",
             }}
           />
           <Stack.Screen

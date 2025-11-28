@@ -9,9 +9,9 @@ import {
 } from "react-native";
 
 import { commonStyles } from "@/scripts/constants";
-import { getRecentSearches, saveSearch } from "../../scripts/searchStorage";
 import useUserStore from "../store/useUserStore";
 
+import useUserStorage from "@/hooks/useUserStorage";
 import { allFavourites, unmarkFavourite } from "../../scripts/api/miscApi";
 
 export default function SuggestionList({
@@ -21,6 +21,7 @@ export default function SuggestionList({
   handleSelectRecent,
   onAddFavourite,
 }) {
+  const { getRecentSearches, saveSearch } = useUserStorage();
   const [recent, setRecent] = useState([]);
   const { favourites, setFavourites } = useUserStore();
 
@@ -35,6 +36,7 @@ export default function SuggestionList({
 
   const loadFavourites = async () => {
     const resp = await allFavourites();
+    console.log("resp: ", resp);
     setFavourites(resp.data);
   };
 

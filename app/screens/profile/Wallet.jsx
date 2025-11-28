@@ -1,9 +1,13 @@
 import BottomPanel from "@/app/component/BottomPanel";
+import TouchableButton from "@/app/component/TouchableButton";
+import AuthContext from "@/app/context/AuthContext";
+import useUserStore from "@/app/store/useUserStore";
 import { allTransactions, makeTransaction } from "@/scripts/api/miscApi";
 import { useNavigation } from "@react-navigation/native";
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Image,
   StatusBar,
   StyleSheet,
   Text,
@@ -14,14 +18,11 @@ import {
 
 export default function Wallet() {
   const navigation = useNavigation();
-  const [wallet, setWallet] = useState({
-    balance: 0,
-    walletId: 0,
-    transactions: [],
-  });
+  const { user } = useContext(AuthContext);
+  const { balance, setBalance, setWalletTransactions } = useUserStore();
   const sheetRef = useRef(null);
   const [amount, setAmount] = useState(100);
-  const [method, setMethod] = useState("CASH");
+  const [method, setMethod] = useState("UPI");
   const [loading, setLoading] = useState(false);
   const [showAmountBox, setShowAmountBox] = useState(false);
 
@@ -57,27 +58,6 @@ export default function Wallet() {
     }
   };
 
-  const actionsData = [
-    {
-      id: "recharge",
-      label: "Recharge",
-      icon: "💳",
-      onPress: () => open(),
-    },
-    {
-      id: "history",
-      label: "Transactions History",
-      icon: "🧾",
-      onPress: () => navigation.navigate("WalletTransaction"),
-    },
-    {
-      id: "pay",
-      label: "Pay From Wallet",
-      icon: "🧾",
-      onPress: () => navigation.navigate("PayFromWalletScreen"),
-    },
-  ];
-
   const setRawAmount = (amount) => {
     setShowAmountBox(false);
     setAmount(amount);
@@ -90,7 +70,8 @@ export default function Wallet() {
   const fetchWallet = async () => {
     const transactions = await allTransactions();
     if (transactions.data) {
-      setWallet(transactions.data);
+      setWalletTransactions(transactions.data?.transactions);
+      setBalance(transactions.data?.balance);
     } else {
       Alert.alert("Info", transactions?.message);
     }
@@ -101,6 +82,10 @@ export default function Wallet() {
       <StatusBar barStyle="dark-content" />
 
       <View style={styles.card}>
+        {/* <ImageBackground
+          source={require("@/assets/images/1.png")}
+          style={{ height: 200, width: 350, position: "absolute" }}
+        /> */}
         <View style={styles.yellowShape} />
         <View style={styles.cardHeader}>
           <Text style={styles.title}>Wallet</Text>
@@ -110,7 +95,7 @@ export default function Wallet() {
         </View>
         <View style={styles.balanceContainer}>
           <Text style={styles.availableLabel}>Available Balance</Text>
-          <Text style={styles.amount}>₹ {wallet.balance.toFixed(2)}</Text>
+          <Text style={styles.amount}>₹ {balance.toFixed(2)}</Text>
         </View>
       </View>
 
@@ -119,19 +104,48 @@ export default function Wallet() {
       </View>
 
       <View style={styles.listContainer}>
-        {actionsData.map((item) => (
-          <TouchableOpacity
-            key={item.id}
-            style={styles.listItem}
-            onPress={item.onPress}
-          >
-            <View style={styles.itemIcon}>
-              <Text style={styles.itemIconText}>{item.icon}</Text>
-            </View>
-            <Text style={styles.itemLabel}>{item.label}</Text>
-            <Text style={styles.chevron}>›</Text>
-          </TouchableOpacity>
-        ))}
+        {/* {actionsData.map((item) => ( */}
+        <TouchableOpacity style={styles.listItem} onPress={open}>
+          <View style={styles.itemIcon}>
+            <Image
+              source={require("@/assets/images/money-rupee-circle-fill.png")}
+              style={{
+                width: 45,
+                height: 45,
+                tintColor: "orange",
+              }}
+            />
+          </View>
+          <Text style={styles.itemLabel}>Recharge</Text>
+          <Text style={styles.chevron}>›</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.listItem}
+          onPress={() => navigation.navigate("WalletTransaction")}
+        >
+          <View style={styles.itemIcon}>
+            <Image
+              source={require(`@/assets/images/transactions.png`)}
+              style={{ width: 35, height: 35 }}
+            />
+          </View>
+          <Text style={styles.itemLabel}>Transactions History</Text>
+          <Text style={styles.chevron}>›</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.listItem}
+          onPress={() => navigation.navigate("PayFromWalletScreen")}
+        >
+          <View style={styles.itemIcon}>
+            <Image
+              source={require(`@/assets/images/business.png`)}
+              style={{ width: 35, height: 35 }}
+            />
+          </View>
+          <Text style={styles.itemLabel}>Pay From Wallet</Text>
+          <Text style={styles.chevron}>›</Text>
+        </TouchableOpacity>
+        {/* ))} */}
       </View>
       <BottomPanel
         ref={sheetRef}
@@ -141,26 +155,37 @@ export default function Wallet() {
         title={"Add Balance"}
       >
         <View style={{ flex: 1 }}>
-          {/* Payment method selection */}
-          <Text style={{ marginBottom: 10, fontSize: 16 }}>Amount:</Text>
           <View style={{ flexDirection: "row", marginBottom: 20 }}>
-            {["UPI", "CASH"].map((m) => (
+            <TouchableOpacity
+              onPress={() => setMethod("UPI")}
+              style={{
+                backgroundColor: method === "UPI" ? "#007AFF" : "#eee",
+                padding: 12,
+                borderRadius: 8,
+                marginRight: 10,
+              }}
+            >
+              <Text style={{ color: method === "UPI" ? "#fff" : "#333" }}>
+                UPI
+              </Text>
+            </TouchableOpacity>
+            {user?.role === "DRIVER" && (
               <TouchableOpacity
-                key={m}
-                onPress={() => setMethod(m)}
+                onPress={() => setMethod("Cash")}
                 style={{
-                  backgroundColor: method === m ? "#007AFF" : "#eee",
+                  backgroundColor: method === "Cash" ? "#007AFF" : "#eee",
                   padding: 12,
                   borderRadius: 8,
                   marginRight: 10,
                 }}
               >
-                <Text style={{ color: method === m ? "#fff" : "#333" }}>
-                  {m.toUpperCase()}
+                <Text style={{ color: method === "Cash" ? "#fff" : "#333" }}>
+                  Cash
                 </Text>
               </TouchableOpacity>
-            ))}
+            )}
           </View>
+          <Text style={{ marginBottom: 10, fontSize: 16 }}>Amount:</Text>
           {showAmountBox && (
             <TextInput
               value={amount}
@@ -194,7 +219,7 @@ export default function Wallet() {
                 </Text>
               </TouchableOpacity>
             ))}
-            <TouchableOpacity
+            <TouchableButton
               onPress={() => {
                 setShowAmountBox(true);
                 setAmount(0);
@@ -209,12 +234,12 @@ export default function Wallet() {
               <Text style={{ color: showAmountBox ? "#fff" : "#333" }}>
                 Other
               </Text>
-            </TouchableOpacity>
+            </TouchableButton>
           </View>
 
           {/* Submit */}
-          <TouchableOpacity
-            disabled={loading}
+          <TouchableButton
+            disabled={loading || amount <= 0}
             onPress={handleAddBalance}
             style={{
               backgroundColor: "#34C759",
@@ -227,7 +252,7 @@ export default function Wallet() {
             >
               {loading ? "Processing..." : "Add Balance"}
             </Text>
-          </TouchableOpacity>
+          </TouchableButton>
         </View>
       </BottomPanel>
     </View>
@@ -264,11 +289,12 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.08,
     shadowRadius: 6,
+    marginTop: 10,
   },
   yellowShape: {
     position: "absolute",
     left: 0,
-    top: -20,
+    top: 10,
     width: 120,
     height: 120,
     backgroundColor: "#ffd56a",
@@ -343,9 +369,6 @@ const styles = StyleSheet.create({
   itemIcon: {
     width: 34,
     height: 34,
-    borderRadius: 17,
-    borderWidth: 1,
-    borderColor: "#e74c3c",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#fff",

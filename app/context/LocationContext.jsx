@@ -4,7 +4,7 @@ import { getDistance } from "geolib";
 import { createContext, useEffect, useMemo, useState } from "react";
 import { Alert } from "react-native";
 
-export const LocationContext = createContext();
+const LocationContext = createContext();
 
 export const LocationProvider = ({ children }) => {
   const allowedArea = {

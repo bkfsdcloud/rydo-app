@@ -1,6 +1,6 @@
 // SocketContext.js
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { SOCKET_URL } from "../../scripts/constants";
+import { SOCKET_URL, STAGE } from "../../scripts/constants";
 import AuthContext from "./AuthContext";
 import LocationContext from "./LocationContext";
 
@@ -39,7 +39,7 @@ export const SocketProvider = ({ children }) => {
 
     console.log("🌐 Connecting WebSocket for", user?.name);
 
-    const socket = new WebSocket(SOCKET_URL, undefined, {
+    const socket = new WebSocket(SOCKET_URL + STAGE, undefined, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -124,7 +124,9 @@ export const SocketProvider = ({ children }) => {
     }
   };
 
-  const addListener = (cb) => listenersRef.current.add(cb);
+  const addListener = (cb) => {
+    if (!listenersRef.current.has(cb)) listenersRef.current.add(cb);
+  };
   const removeListener = (cb) => listenersRef.current.delete(cb);
 
   return (

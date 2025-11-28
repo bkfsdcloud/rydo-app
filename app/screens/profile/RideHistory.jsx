@@ -5,6 +5,7 @@ import * as _ from "lodash";
 import moment from "moment";
 import { useEffect, useState } from "react";
 import {
+  Image,
   SectionList,
   StatusBar,
   StyleSheet,
@@ -67,11 +68,18 @@ export default function RideHistory() {
     >
       <View style={styles.bookingContent}>
         <View style={styles.carIcon}>
-          <View style={styles.carBody}>
+          <Image
+            source={require("@/assets/images/taxi.png")}
+            style={{
+              width: 40,
+              height: 40,
+            }}
+          />
+          {/* <View style={styles.carBody}>
             <View style={styles.carWindow} />
             <View style={styles.carWheel} />
             <View style={styles.carWheel} />
-          </View>
+          </View> */}
         </View>
         <View style={styles.bookingDetails}>
           <Text style={styles.bookingDate}>
@@ -229,7 +237,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   carIcon: {
-    marginRight: 12,
+    marginRight: 10,
   },
   carBody: {
     width: 40,

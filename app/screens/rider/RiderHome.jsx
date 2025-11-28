@@ -1,6 +1,6 @@
 import BottomPanel from "@/app/component/BottomPanel";
 import LocationInput from "@/app/component/LocationInput";
-import { LocationContext } from "@/app/context/LocationContext";
+import LocationContext from "@/app/context/LocationContext";
 import { getAddress } from "@/scripts/api/geoApi";
 import { available } from "@/scripts/api/riderApi";
 import { commonStyles, DESTINATION, ORIGIN } from "@/scripts/constants";
@@ -35,6 +35,7 @@ export default function MapScreen() {
 
   const [recentre, setRecentre] = useState(true);
   const [drivers, setDrivers] = useState([]);
+  const [originSearching, setOriginSearching] = useState(false);
   const [searching, setSearching] = useState(false);
   const [confirmLocation, setConfirmLocation] = useState(true);
 
@@ -86,12 +87,14 @@ export default function MapScreen() {
   );
 
   const updateMapLocation = useCallback(async (newRegion) => {
+    setOriginSearching(true);
     const coords = {
       lat: newRegion?.latitude || newRegion?.lat,
       lng: newRegion?.longitude || newRegion?.lng,
     };
     const response = await getAddress(coords);
     setOrigin({ ...response, coords });
+    setOriginSearching(false);
   }, []);
 
   const checkAvailableDrivers = useCallback(async () => {
@@ -100,7 +103,7 @@ export default function MapScreen() {
       longitude: origin.coords?.lng,
     };
     const res = await available(body);
-    setDrivers(res.data || []);
+    setDrivers(res.data?.drivers || []);
   }, [origin?.coords?.lat, origin?.coords?.lng]);
 
   const trimSpace = (value) => (value ? value.trim() : value);
@@ -258,14 +261,17 @@ export default function MapScreen() {
               <LocationInput
                 editable={false}
                 placeholder={
-                  searching ? "Fetching Location..." : "Select Pick Up Location"
+                  originSearching
+                    ? "Fetching Location..."
+                    : "Select Pick Up Location"
                 }
                 value={
-                  searching
+                  originSearching
                     ? ""
                     : trimSpace(`${origin.description} ${origin.secondaryText}`)
                 }
                 onPress={() => {
+                  if (id && id > 0) return;
                   navigation.navigate(
                     "LocationSearch",
                     { searchFor: ORIGIN },
@@ -295,6 +301,7 @@ export default function MapScreen() {
                     `${destination.description} ${destination.secondaryText}`
                   )}
                   onPress={() => {
+                    if (id && id > 0) return;
                     navigation.navigate(
                       "LocationSearch",
                       {

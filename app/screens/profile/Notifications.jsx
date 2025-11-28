@@ -3,7 +3,11 @@ import { StyleSheet, Text, View } from "react-native";
 export default function Notifications({ navigation }) {
   return (
     <View style={styles.container}>
-      <Text> Notification details </Text>
+      <View style={styles.empty}>
+        <Text style={{ fontSize: 22, fontWeight: "400" }}>
+          No Notifications
+        </Text>
+      </View>
     </View>
   );
 }
@@ -21,5 +25,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 5,
     elevation: 2,
+  },
+  empty: {
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

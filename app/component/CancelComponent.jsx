@@ -26,6 +26,7 @@ export default function CancelComponent({ visible, onClose }) {
   const [cancellationFee, setCancellationFee] = useState(0);
 
   const isRejectFlow = () => status === "REQUESTED" && user?.role === "DRIVER";
+  const isModal = () => status !== "REQUESTED" && status !== "PENDING";
 
   useEffect(() => {
     if (!visible) return;
@@ -64,104 +65,112 @@ export default function CancelComponent({ visible, onClose }) {
         await cancelRide({
           rideData: { id, status },
           reason: selectedMessage,
-          cancellationFee,
         });
-        const walletPayload = {
-          referenceId: id,
-          amount: -cancellationFee,
-          type: "ADMIN_ADJUSTMENT",
-          paymentMethod: "WALLET",
-          remarks: `Ride Cancellation charge`,
-        };
+        if (cancellationFee > 0) {
+          const walletPayload = {
+            referenceId: id,
+            amount: -cancellationFee,
+            type: "ADMIN_ADJUSTMENT",
+            paymentMethod: "WALLET",
+            remarks: `Ride Cancellation charge`,
+          };
 
-        makeTransaction(walletPayload);
+          makeTransaction(walletPayload);
+        }
       }
     }
     onClose(true);
   };
 
-  return (
-    <Modal visible={visible} transparent animationType="fade">
+  const getComponent = () => (
+    <View
+      style={{
+        backgroundColor: "rgba(0,0,0,0.5)",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100%",
+        width: "100%",
+        zIndex: 9999,
+      }}
+    >
       <View
         style={{
-          backgroundColor: "rgba(0,0,0,0.5)",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "100%",
+          backgroundColor: "#fff",
+          borderRadius: 10,
+          width: "80%",
+          padding: 15,
         }}
       >
-        <View
-          style={{
-            backgroundColor: "#fff",
-            borderRadius: 10,
-            width: "80%",
-            padding: 15,
-          }}
-        >
-          <View
-            style={{ flexDirection: "row", justifyContent: "space-between" }}
-          >
-            <View style={commonStyles.column}>
-              <Text style={[commonStyles.title, { paddingTop: 0 }]}>
-                Reason:
+        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+          <View style={commonStyles.column}>
+            <Text style={[commonStyles.title, { paddingTop: 0 }]}>Reason:</Text>
+            {cancellationFee > 0 && (
+              <Text style={[commonStyles.title, { marginBottom: 5 }]}>
+                Charges applicable: ₹{cancellationFee}
               </Text>
-              {cancellationFee > 0 && (
-                <Text style={[commonStyles.title, { marginBottom: 5 }]}>
-                  Charges applicable: ₹{cancellationFee}
-                </Text>
-              )}
-            </View>
-
-            <TouchableOpacity
-              onPress={() => onClose()}
-              style={{
-                padding: 10,
-                paddingRight: 0,
-                paddingTop: 0,
-                backgroundColor: "#fff",
-                borderRadius: 8,
-              }}
-            >
-              <Ionicons name="close-circle" size={20}></Ionicons>
-            </TouchableOpacity>
+            )}
           </View>
 
-          <Dropdown
-            style={styles.dropdown}
-            data={isRejectFlow() ? rejectReasons : reasons}
-            labelField="reason"
-            renderItem={(item, selected) => (
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={{ padding: 10, fontWeight: selected ? "600" : "400" }}
-                >
-                  {item?.reason}
-                </Text>
-              </View>
-            )}
-            valueField="id"
-            placeholder="Select Reason"
-            value={selectedMessage}
-            onChange={(item) => setSelectedMessage(item.id)}
-          />
-
           <TouchableOpacity
-            onPress={handleCancel}
-            disabled={!selectedMessage}
-            style={[
-              commonStyles.button,
-              {
-                flex: 0,
-                opacity: !selectedMessage ? 0.5 : 1,
-                backgroundColor: "#000",
-              },
-            ]}
+            onPress={() => onClose()}
+            style={{
+              padding: 10,
+              paddingRight: 0,
+              paddingTop: 0,
+              backgroundColor: "#fff",
+              borderRadius: 8,
+            }}
           >
-            <Text style={commonStyles.buttonText}>Submit</Text>
+            <Ionicons name="close-circle" size={20}></Ionicons>
           </TouchableOpacity>
         </View>
+
+        <Dropdown
+          style={styles.dropdown}
+          data={isRejectFlow() ? rejectReasons : reasons}
+          labelField="reason"
+          renderItem={(item, selected) => (
+            <View style={{ flex: 1 }}>
+              <Text
+                style={{ padding: 10, fontWeight: selected ? "600" : "400" }}
+              >
+                {item?.reason}
+              </Text>
+            </View>
+          )}
+          valueField="id"
+          placeholder="Select Reason"
+          value={selectedMessage}
+          onChange={(item) => setSelectedMessage(item.id)}
+        />
+
+        <TouchableOpacity
+          onPress={handleCancel}
+          disabled={!selectedMessage}
+          style={[
+            commonStyles.button,
+            {
+              flex: 0,
+              opacity: !selectedMessage ? 0.5 : 1,
+              backgroundColor: "#000",
+            },
+          ]}
+        >
+          <Text style={commonStyles.buttonText}>Submit</Text>
+        </TouchableOpacity>
       </View>
-    </Modal>
+    </View>
+  );
+
+  return (
+    visible &&
+    (isModal() ? (
+      <Modal visible={visible} transparent animationType="fade">
+        {getComponent()}
+      </Modal>
+    ) : (
+      getComponent()
+    ))
   );
 }
 

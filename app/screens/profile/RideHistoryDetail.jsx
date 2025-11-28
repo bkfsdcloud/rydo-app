@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import moment from "moment";
 import React, { useContext, useEffect } from "react";
 import {
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -66,7 +67,14 @@ export default function RideHistoryDetail() {
               <Text style={styles.fare}>₹{rideInfo.fare_estimated} (est)</Text>
             </View>
             <View style={styles.topRight}>
-              <Text style={styles.icon}>🚗</Text>
+              <Image
+                source={require("@/assets/images/taxi_front.png")}
+                style={{
+                  width: 40,
+                  height: 40,
+                  marginRight: 25,
+                }}
+              />
               <Text
                 style={[
                   styles.status,

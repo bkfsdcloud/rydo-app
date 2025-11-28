@@ -1,7 +1,8 @@
+import useUserStore from "@/app/store/useUserStore";
 import { allTransactions } from "@/scripts/api/miscApi";
 import { Ionicons } from "@expo/vector-icons";
 import moment from "moment";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   Alert,
   FlatList,
@@ -12,7 +13,8 @@ import {
 } from "react-native";
 
 export default function WalletTransaction() {
-  const [wallet, setWallet] = useState({ balance: 0, transactions: [] });
+  const { setBalance, walletTransactions, setWalletTransactions } =
+    useUserStore();
 
   useEffect(() => {
     fetchWallet();
@@ -21,7 +23,8 @@ export default function WalletTransaction() {
   const fetchWallet = async () => {
     const transactions = await allTransactions();
     if (transactions.data) {
-      setWallet(transactions.data);
+      setWalletTransactions(transactions.data?.transactions);
+      setBalance(transactions.data?.balance);
     } else {
       Alert.alert("Info", transactions?.message);
     }
@@ -74,7 +77,7 @@ export default function WalletTransaction() {
       <Text style={styles.sectionTitle}>Recent Transactions</Text>
 
       <FlatList
-        data={wallet?.transactions}
+        data={walletTransactions || []}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.list}

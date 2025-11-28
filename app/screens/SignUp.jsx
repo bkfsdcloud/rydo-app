@@ -1,21 +1,20 @@
 import { createWallet } from "@/scripts/api/miscApi";
 import { commonStyles } from "@/scripts/constants";
 import { useRoute } from "@react-navigation/native";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Animated,
   Keyboard,
-  KeyboardAvoidingView,
-  Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import Toast from "react-native-toast-message";
 import { signUp } from "../../scripts/api/userApi";
+import BottomPanel from "../component/BottomPanel";
 import AuthContext from "../context/AuthContext";
 
 export default function SignUp({ navigation }) {
@@ -29,6 +28,8 @@ export default function SignUp({ navigation }) {
   };
 
   const route = useRoute();
+  const sheetRef = useRef(null);
+  const translateY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     async function initNotifications() {
@@ -42,6 +43,28 @@ export default function SignUp({ navigation }) {
       // }
     }
     initNotifications();
+    sheetRef.current.expand();
+
+    const show = Keyboard.addListener("keyboardDidShow", (e) => {
+      Animated.timing(translateY, {
+        toValue: -e.endCoordinates.height + 50,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    });
+
+    const hide = Keyboard.addListener("keyboardDidHide", () => {
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    });
+
+    return () => {
+      show.remove();
+      hide.remove();
+    };
   }, []);
 
   const handleSubmit = async () => {
@@ -79,49 +102,43 @@ export default function SignUp({ navigation }) {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1 }}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+    <Animated.View style={{ flex: 1, transform: [{ translateY }] }}>
+      <BottomPanel ref={sheetRef} title={"Profile Details"}>
         <View style={styles.container}>
-          <View style={{ position: "absolute", bottom: 50, width: "100%" }}>
-            <Text style={styles.title}>Profile Details</Text>
-            <TextInput
-              placeholder="Username"
-              name="name"
-              autoCorrect={false}
-              keyboardType="name-phone-pad"
-              clearButtonMode="always"
-              placeholderTextColor="#888"
-              value={newUser.name}
-              onChangeText={(value) => updateUser("name", value)}
-              style={styles.input}
-            />
-            <TextInput
-              placeholder="Email ID"
-              name="email"
-              autoCorrect={false}
-              keyboardType="email-address"
-              clearButtonMode="always"
-              placeholderTextColor="#888"
-              value={newUser.email}
-              onChangeText={(value) => updateUser("email", value)}
-              style={styles.input}
-            />
+          <TextInput
+            placeholder="Username"
+            name="name"
+            autoCorrect={false}
+            keyboardType="name-phone-pad"
+            clearButtonMode="always"
+            placeholderTextColor="#888"
+            value={newUser.name}
+            onChangeText={(value) => updateUser("name", value)}
+            style={styles.input}
+          />
+          <TextInput
+            placeholder="Email ID"
+            name="email"
+            autoCorrect={false}
+            keyboardType="email-address"
+            clearButtonMode="always"
+            placeholderTextColor="#888"
+            value={newUser.email}
+            onChangeText={(value) => updateUser("email", value)}
+            style={styles.input}
+          />
 
-            <View style={styles.btnRow}>
-              <TouchableOpacity
-                onPress={handleSubmit}
-                style={[styles.createBtn]}
-              >
-                <Text style={commonStyles.textWhite}>Create Account</Text>
-              </TouchableOpacity>
-            </View>
+          <View style={commonStyles.row}>
+            <TouchableOpacity
+              onPress={handleSubmit}
+              style={[commonStyles.button]}
+            >
+              <Text style={commonStyles.textWhite}>Create Account</Text>
+            </TouchableOpacity>
           </View>
         </View>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+      </BottomPanel>
+    </Animated.View>
   );
 }
 
@@ -130,7 +147,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 16,
   },
   title: { fontSize: 20, marginBottom: 12 },
   input: {

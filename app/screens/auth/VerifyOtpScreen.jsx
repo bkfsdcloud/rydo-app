@@ -101,7 +101,7 @@ const VerifyOtpScreen = () => {
         await saveToken(response.data);
         return;
       } else if (response.data.message === "New user") {
-        navigation.navigate("SignUp", { phone });
+        navigation.replace("SignUp", { phone });
         return;
       }
       Alert.alert("Infomation", response.data.message);

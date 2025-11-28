@@ -1,8 +1,10 @@
 import { StyleSheet } from "react-native";
 
-export const API_URL = "http://192.168.1.15:8083";
+export const API_URL =
+  "https://ohtryxvm9b.execute-api.ap-south-1.amazonaws.com/";
 export const SOCKET_URL =
-  "wss://yugvqed780.execute-api.ap-south-1.amazonaws.com/dev/";
+  "wss://yugvqed780.execute-api.ap-south-1.amazonaws.com/";
+export const STAGE = "dev";
 export const GOOGLE_MAPS_API_KEY = "AIzaSyDqaqO6czuq1cTzTetNJU6yhnQP2b6_k8U";
 
 export const ORIGIN = "origin";
@@ -133,6 +135,14 @@ export const commonStyles = StyleSheet.create({
     fontSize: 14,
     padding: 10,
   },
+  inputWhite: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 5,
+    backgroundColor: "#fff",
+    fontSize: 14,
+    padding: 10,
+  },
   dropdown: {
     position: "absolute",
     top: "9%",
@@ -219,4 +229,13 @@ export const commonStyles = StyleSheet.create({
     letterSpacing: 1.2,
   },
   cardBorder: { borderWidth: 1, borderColor: "grey" },
+  textColorRed: {
+    color: "#be1414ff",
+  },
+  textColorWhite: {
+    color: "#fff",
+  },
+  textColorBlack: {
+    color: "#000",
+  },
 });

@@ -1,3 +1,5 @@
+import LocationContext from "@/app/context/LocationContext";
+import useUserStore from "@/app/store/useUserStore";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useContext } from "react";
@@ -12,7 +14,9 @@ import AuthContext from "../../context/AuthContext";
 
 export default function Profile() {
   const { user, logout } = useContext(AuthContext);
+  const { location } = useContext(LocationContext);
   const navigation = useNavigation();
+  const { driverStatus } = useUserStore();
 
   const menuItems = [
     {
@@ -86,11 +90,6 @@ export default function Profile() {
         )}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
       />
-
-      <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
-        <Ionicons name="log-out-outline" size={20} color="#fff" />
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
     </View>
   );
 }
@@ -104,6 +103,7 @@ const styles = StyleSheet.create({
   avatarText: {
     color: "white",
     fontWeight: "bold",
+    textTransform: "uppercase",
   },
   container: { flex: 1, backgroundColor: "#f9f9f9", padding: 20 },
   header: {

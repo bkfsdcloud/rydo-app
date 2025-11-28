@@ -3,6 +3,7 @@ import RatingComponent from "@/app/component/RatingComponent";
 
 import { useAlert } from "@/app/context/AlertContext";
 import AuthContext from "@/app/context/AuthContext";
+import useUserStore from "@/app/store/useUserStore";
 import { Ionicons } from "@expo/vector-icons";
 import polylineTool from "@mapbox/polyline";
 import { useNavigation } from "@react-navigation/native";
@@ -25,7 +26,7 @@ import { handleGetRoute } from "../../../scripts/api/geoApi";
 import { updateStatus } from "../../../scripts/api/riderApi";
 import { commonStyles } from "../../../scripts/constants";
 import BottomPanel from "../../component/BottomPanel";
-import { LocationContext } from "../../context/LocationContext";
+import LocationContext from "../../context/LocationContext";
 import SocketContext from "../../context/SocketContext";
 import { useRideStore } from "../../store/useRideStore";
 import ChatScreen from "../profile/ChatScreen";
@@ -59,6 +60,8 @@ export default function DriverHome() {
     driverId,
     setDriverId,
   } = useRideStore();
+
+  const { setDriverStatus } = useUserStore();
 
   const [dutyStatus, setDutyStatus] = useState("ACTIVE");
   const mapRef = useRef(null);
@@ -125,6 +128,7 @@ export default function DriverHome() {
 
       if (res?.data) {
         setStatus(res?.data.status);
+        console.log("rideInfo: ", rideInfo);
         setRoutePositions(rideInfo);
         handleRoute(res?.data.status);
       } else if (res?.message) {
@@ -208,6 +212,7 @@ export default function DriverHome() {
       }
       setBottomView("RATE");
       setClosablePan(true);
+      setPanelTitle("Rate Your Ride");
       sheetRef.current?.expand();
     }
   }, [id, fare]);
@@ -241,6 +246,9 @@ export default function DriverHome() {
   };
 
   const handleRoute = async (status) => {
+    console.log("originRef.current: ", originRef.current);
+    console.log("tempLocation.current: ", tempLocation.current);
+    console.log("destinationRef.current: ", destinationRef.current);
     const res = await handleGetRoute({
       origin: tempLocation.current
         ? `${tempLocation.current?.coords?.lat},${tempLocation.current?.coords?.lng}`
@@ -384,6 +392,7 @@ export default function DriverHome() {
 
   const toggleDuty = useCallback(() => {
     const status = dutyStatus === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    setDriverStatus(status);
     setDutyStatus(status);
     sendMessage({
       event: "onLocationUpdate",
@@ -499,6 +508,7 @@ export default function DriverHome() {
               onPress={() => {
                 setBottomView("CHAT");
                 setClosablePan(true);
+                setPanelTitle("Chat");
                 sheetRef.current?.expand();
               }}
             >

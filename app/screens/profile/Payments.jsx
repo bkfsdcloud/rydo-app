@@ -1,10 +1,11 @@
+import useUserStore from "@/app/store/useUserStore";
 import { allTransactions } from "@/scripts/api/miscApi";
-import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -13,7 +14,7 @@ import {
 
 export default function Payments() {
   const navigation = useNavigation();
-  const [wallet, setWallet] = useState({ balance: 0, transactions: [] });
+  const { balance, setBalance, setWalletTransactions } = useUserStore();
 
   const [loading, setLoading] = useState(false);
 
@@ -26,7 +27,8 @@ export default function Payments() {
     const transactions = await allTransactions({ skipGlobalLoader: true });
     setLoading(false);
     if (transactions.data) {
-      setWallet(transactions.data);
+      setWalletTransactions(transactions.data?.transactions);
+      setBalance(transactions.data?.balance);
     } else {
       Alert.alert("Info", transactions?.message);
     }
@@ -45,10 +47,9 @@ export default function Payments() {
             {loading && <ActivityIndicator size="small" color={"red"} />}
             {!loading && (
               <Text style={styles.icon}>
-                <Ionicons
-                  name={"wallet-outline"}
-                  size={20}
-                  color={"#f7312aff"}
+                <Image
+                  source={require("@/assets/images/wallet.png")}
+                  style={{ width: 40, height: 40, padding: 8 }}
                 />
               </Text>
             )}
@@ -56,7 +57,7 @@ export default function Payments() {
           <View style={styles.cardText}>
             <Text style={styles.cardTitle}>Wallet</Text>
             <Text style={styles.cardSubtitle}>
-              Balance : ₹{wallet.balance.toFixed(2)}
+              Balance : ₹{balance.toFixed(2)}
             </Text>
           </View>
         </View>
@@ -69,7 +70,10 @@ export default function Payments() {
         <View style={styles.cardLeft}>
           <View style={[styles.iconBg, { backgroundColor: "#e8f5ff" }]}>
             <Text style={styles.icon}>
-              <Ionicons name={"cash-outline"} size={20} color={"orange"} />
+              <Image
+                source={require("@/assets/images/money.png")}
+                style={{ width: 45, height: 45, padding: 5 }}
+              />
             </Text>
           </View>
           <View style={styles.cardText}>
@@ -82,7 +86,10 @@ export default function Payments() {
         <View style={styles.cardLeft}>
           <View style={[styles.iconBg, { backgroundColor: "#e8f5ff" }]}>
             <Text style={styles.icon}>
-              <Ionicons name={"qr-code-outline"} size={20} color={"orange"} />
+              <Image
+                source={require("@/assets/images/upi.png")}
+                style={{ width: 45, height: 45, padding: 5 }}
+              />
             </Text>
           </View>
           <View style={styles.cardText}>

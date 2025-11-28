@@ -2,7 +2,6 @@ import { allConfigs } from "@/scripts/api/miscApi";
 import { activeRide } from "@/scripts/api/riderApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useEffect, useState } from "react";
-import WebSocketService from "../../scripts/WebSocketService";
 import useMessageStore from "../store/useMessageStore";
 import { useRideStore } from "../store/useRideStore";
 import useUserStore from "../store/useUserStore";
@@ -96,7 +95,6 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     console.log("Logout =>");
     await AsyncStorage.removeItem("userToken");
-    WebSocketService.disconnect();
     resetRide();
 
     setToken(null);
@@ -104,7 +102,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ token, user, saveToken, logout }}>
+    <AuthContext.Provider value={{ token, user, setUser, saveToken, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -91,10 +91,8 @@ export default function LocationSearch() {
       />
       <BottomPanel ref={sheetRef}>
         {bottomView === "DEFAULT" && (
-          <View>
-            <Text
-              style={[commonStyles.banner, { bottom: 10, alignSelf: "center" }]}
-            >
+          <View style={commonStyles.column}>
+            <Text style={[commonStyles.banner, { alignSelf: "center" }]}>
               Not able to find the location
             </Text>
             <TouchableOpacity

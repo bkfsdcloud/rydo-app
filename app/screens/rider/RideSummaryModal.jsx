@@ -7,9 +7,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useCallback, useState } from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import SkeletonPlaceholder from "react-native-skeleton-placeholder-expo";
 import { useRideStore } from "../../store/useRideStore";
 
-export default function RideSummaryModal({ onShowBottomPanel }) {
+export default function RideSummaryModal({ onShowBottomPanel, loading }) {
   const navigation = useNavigation();
   const [showCancelTab, setShowCancelTab] = useState(false);
 
@@ -97,96 +98,147 @@ export default function RideSummaryModal({ onShowBottomPanel }) {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <>
       <CancelComponent
         visible={showCancelTab}
         onClose={handleCancel}
       ></CancelComponent>
-      <Text style={styles.heading}>Trip Summary</Text>
-      <View style={styles.row}>
-        <Text style={styles.subText}>Distance: {distance}</Text>
-        <Text style={styles.subText}>Duration: {duration}</Text>
-      </View>
+      <View style={styles.container}>
+        <Text style={styles.heading}>Trip Summary</Text>
+        <View style={styles.row}>
+          <Text style={styles.subText}>Distance: {distance}</Text>
+          <Text style={styles.subText}>Duration: {duration}</Text>
+        </View>
 
-      {/* Vehicle Category */}
-      <View style={styles.row}>
-        {Object.entries(fares || {}).map(([item, value]) => (
-          <TouchableOpacity
-            key={item}
-            style={[styles.option, category === item && styles.selectedOption]}
+        {loading && (
+          <>
+            <SkeletonPlaceholder>
+              <SkeletonPlaceholder.Item
+                flexDirection="row"
+                alignItems="center"
+                marginBottom={20}
+              >
+                {[1, 2, 3, 4].map((val, idx) => (
+                  <SkeletonPlaceholder.Item key={idx} marginHorizontal={5}>
+                    <SkeletonPlaceholder.Item
+                      width={80}
+                      height={70}
+                      padding={3}
+                      borderRadius={10}
+                    />
+                  </SkeletonPlaceholder.Item>
+                ))}
+              </SkeletonPlaceholder.Item>
+            </SkeletonPlaceholder>
+            <SkeletonPlaceholder>
+              <SkeletonPlaceholder.Item
+                flexDirection="row"
+                alignItems="center"
+                marginBottom={20}
+              >
+                {[1, 2].map((val, idx) => (
+                  <SkeletonPlaceholder.Item key={idx} marginHorizontal={5}>
+                    <SkeletonPlaceholder.Item
+                      width={170}
+                      height={60}
+                      padding={3}
+                      borderRadius={10}
+                    />
+                  </SkeletonPlaceholder.Item>
+                ))}
+              </SkeletonPlaceholder.Item>
+            </SkeletonPlaceholder>
+          </>
+        )}
+        {!loading && (
+          <>
+            <View style={styles.row}>
+              {Object.entries(fares || {}).map(([item, value]) => (
+                <TouchableOpacity
+                  key={item}
+                  style={[
+                    styles.option,
+                    category === item && styles.selectedOption,
+                  ]}
+                  disabled={isDisabled()}
+                  onPress={() => handleSelectCategory(item, value)}
+                >
+                  <Ionicons
+                    name={"car-outline"}
+                    size={20}
+                    color={category === item ? "#333" : "grey"}
+                  />
+                  <Text
+                    style={[
+                      styles.optionText,
+                      category === item && styles.optionTextSelected,
+                    ]}
+                  >
+                    {item}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.fare,
+                      category === item && styles.fareSelected,
+                    ]}
+                  >
+                    ₹{value?.fare}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.sectionSpace} />
+            <View style={styles.pillRow}>
+              <TouchableButton
+                style={styles.pill}
+                onPress={() =>
+                  isDisabled() ? null : onShowBottomPanel("PAYMENT_METHOD")
+                }
+              >
+                <Text style={styles.pillIcon}>
+                  <Ionicons
+                    name={
+                      paymentMethod === "Cash"
+                        ? "cash-outline"
+                        : paymentMethod === "UPI"
+                        ? "qr-code-outline"
+                        : "card-outline"
+                    }
+                    size={22}
+                    color={"#333"}
+                  />
+                </Text>
+                <Text>{paymentMethod}</Text>
+              </TouchableButton>
+              <TouchableButton style={styles.pill}>
+                <Text style={styles.pillIcon}>
+                  <Ionicons name={"person-outline"} size={22} color={"#333"} />
+                </Text>
+                <Text>Personal</Text>
+              </TouchableButton>
+            </View>
+          </>
+        )}
+
+        {(!id || id === 0) && (
+          <TouchableButton
+            style={[commonStyles.button, isDisabled()]}
+            onPress={handleBookRide}
             disabled={isDisabled()}
-            onPress={() => handleSelectCategory(item, value)}
           >
-            <Ionicons
-              name={"car-outline"}
-              size={20}
-              color={category === item ? "#333" : "grey"}
-            />
-            <Text
-              style={[
-                styles.optionText,
-                category === item && styles.optionTextSelected,
-              ]}
-            >
-              {item}
-            </Text>
-            <Text
-              style={[styles.fare, category === item && styles.fareSelected]}
-            >
-              ₹{value?.fare}
-            </Text>
-          </TouchableOpacity>
-        ))}
+            <Text style={commonStyles.buttonText}>Book Ride</Text>
+          </TouchableButton>
+        )}
+        {id > 0 && ["ASSIGNED", "ACCEPTED"].includes(status) && (
+          <TouchableButton
+            style={[commonStyles.button]}
+            onPress={() => setShowCancelTab(true)}
+          >
+            <Text style={[commonStyles.buttonText]}>Cancel Ride</Text>
+          </TouchableButton>
+        )}
       </View>
-      <View style={styles.sectionSpace} />
-      <View style={styles.pillRow}>
-        <TouchableButton
-          style={styles.pill}
-          onPress={() =>
-            isDisabled() ? null : onShowBottomPanel("PAYMENT_METHOD")
-          }
-        >
-          <Text style={styles.pillIcon}>
-            <Ionicons
-              name={
-                paymentMethod === "Cash"
-                  ? "cash-outline"
-                  : paymentMethod === "UPI"
-                  ? "qr-code-outline"
-                  : "card-outline"
-              }
-              size={22}
-              color={"#333"}
-            />
-          </Text>
-          <Text>{paymentMethod}</Text>
-        </TouchableButton>
-        <TouchableButton style={styles.pill}>
-          <Text style={styles.pillIcon}>
-            <Ionicons name={"person-outline"} size={22} color={"#333"} />
-          </Text>
-          <Text>Personal</Text>
-        </TouchableButton>
-      </View>
-
-      {(!id || id === 0) && (
-        <TouchableButton
-          style={[commonStyles.button, isDisabled()]}
-          onPress={handleBookRide}
-          disabled={isDisabled()}
-        >
-          <Text style={commonStyles.buttonText}>Book Ride</Text>
-        </TouchableButton>
-      )}
-      {id > 0 && ["ASSIGNED", "ACCEPTED"].includes(status) && (
-        <TouchableButton
-          style={[commonStyles.button]}
-          onPress={() => setShowCancelTab(true)}
-        >
-          <Text style={[commonStyles.buttonText]}>Cancel Ride</Text>
-        </TouchableButton>
-      )}
-    </View>
+    </>
   );
 }
 
