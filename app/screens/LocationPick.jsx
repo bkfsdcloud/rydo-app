@@ -40,6 +40,7 @@ export default function LocationPick() {
   const mapRef = useRef(null);
   const [isAnimating, setIsAnimating] = useState(false);
 
+  const [originSearching, setOriginSearching] = useState(false);
   const [panelTitle, setPanelTitle] = useState("");
   const [refObj, setRefObj] = useState(null);
   const [bottomView, setBottomView] = useState("DEFAULT");
@@ -71,12 +72,14 @@ export default function LocationPick() {
   }, []);
 
   async function updateMapLocation(newLocation) {
+    setOriginSearching(true);
     const newCoords = {
       lat: newLocation?.latitude || location.lat,
       lng: newLocation?.longitude || location.lng,
     };
     const response = await getAddress(newCoords);
     setLocation(searchFor, { ...response, coords: newCoords });
+    setOriginSearching(false);
   }
 
   const onSearch = useCallback(async (text) => {
@@ -196,15 +199,21 @@ export default function LocationPick() {
         {bottomView === "DEFAULT" && (
           <View style={[commonStyles.column]}>
             <LocationInput
+              editable={false}
               value={
-                searchFor === ORIGIN
+                originSearching
+                  ? ""
+                  : searchFor === ORIGIN
                   ? `${origin.description} ${origin.secondaryText}`
                   : `${destination.description} ${destination.secondaryText}`
               }
-              placeholder="Enter Origin"
+              placeholder={
+                originSearching ? "Fetching Location..." : "Enter Origin"
+              }
               showIcon={false}
               placeholderTextColor={"grey"}
               favIcon={true}
+              onAddFavourite={addFavourite}
             />
             <TouchableOpacity
               style={commonStyles.button}
@@ -226,7 +235,6 @@ export default function LocationPick() {
               onChangeText={(text) => {
                 favNameRef.current.value = text;
               }}
-              onAddFavourite={addFavourite}
             />
 
             <TouchableOpacity

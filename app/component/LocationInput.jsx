@@ -25,6 +25,7 @@ export default function LocationInput({
   const { favourites } = useUserStore();
   const { origin, destination } = useRideStore();
   const [isFav, setIsFav] = useState(false);
+  const trimSpace = (value) => (value ? value.trim() : value);
 
   const getStyleClass = useCallback(() => {
     if (showIcon && favIcon) {
@@ -62,7 +63,7 @@ export default function LocationInput({
         editable={editable}
         allowFontScaling={false}
         style={[getStyleClass(), style]}
-        value={value}
+        value={trimSpace(value)}
         onChangeText={onChangeText}
         onPress={onPress}
         autoCorrect={false}
