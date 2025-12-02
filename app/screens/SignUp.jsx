@@ -5,7 +5,6 @@ import { useContext, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
-  Keyboard,
   StyleSheet,
   Text,
   TextInput,
@@ -45,26 +44,26 @@ export default function SignUp({ navigation }) {
     initNotifications();
     sheetRef.current.expand();
 
-    const show = Keyboard.addListener("keyboardDidShow", (e) => {
-      Animated.timing(translateY, {
-        toValue: -e.endCoordinates.height + 50,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-    });
+    // const show = Keyboard.addListener("keyboardDidShow", (e) => {
+    //   Animated.timing(translateY, {
+    //     toValue: -e.endCoordinates.height + 50,
+    //     duration: 200,
+    //     useNativeDriver: true,
+    //   }).start();
+    // });
 
-    const hide = Keyboard.addListener("keyboardDidHide", () => {
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-    });
+    // const hide = Keyboard.addListener("keyboardDidHide", () => {
+    //   Animated.timing(translateY, {
+    //     toValue: 0,
+    //     duration: 200,
+    //     useNativeDriver: true,
+    //   }).start();
+    // });
 
-    return () => {
-      show.remove();
-      hide.remove();
-    };
+    // return () => {
+    //   show.remove();
+    //   hide.remove();
+    // };
   }, []);
 
   const handleSubmit = async () => {

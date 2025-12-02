@@ -1,7 +1,7 @@
 import TouchableButton from "@/app/component/TouchableButton";
 import { commonStyles } from "@/scripts/constants";
 import { useNavigation } from "@react-navigation/native";
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Image,
@@ -11,6 +11,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { genOtp } from "../../../scripts/api/userApi";
 
 export default function LoginScreen() {
@@ -52,57 +53,65 @@ export default function LoginScreen() {
   }, []);
 
   return (
-    <Animated.View style={{ flex: 1, transform: [{ translateY }] }}>
-      <View style={commonStyles.container}>
-        <View style={styles.header}>
-          <Text style={styles.brandText}>Welcome to</Text>
-          {/* <Text style={styles.brandText}>Taxi Taxi!</Text> */}
-        </View>
-        <Image
-          source={require("@/assets/images/taxitaxi-logo.png")}
-          style={{
-            width: "100%",
-            height: 300,
-          }}
-        />
-        <View style={[commonStyles.column]}>
-          <Text style={styles.sectionTitle}>Login with your Phone Number</Text>
-          <TextInput
-            textContentType="telephoneNumber"
-            placeholder="eg. 9841232587"
-            keyboardType="number-pad"
-            returnKeyType="done"
-            clearButtonMode="always"
-            value={phone}
-            placeholderTextColor="#929292ff"
-            maxLength={11}
-            onChangeText={(txt) => {
-              setPhone(txt.replaceAll("-", ""));
-            }}
-            allowFontScaling={false}
-            style={[
-              commonStyles.input,
-              commonStyles.textAlignCenter,
-              { backgroundColor: "#fff" },
-            ]}
-          />
-          <View style={commonStyles.row}>
-            <TouchableButton
-              disabled={phone?.length !== 10}
-              onPress={triggerOtp}
-              style={[commonStyles.button]}
-            >
-              <Text style={[commonStyles.buttonText]}>Send OTP</Text>
-            </TouchableButton>
+    <SafeAreaView style={commonStyles.safeArea}>
+      {/* <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "" : ""}
+      > */}
+      <Animated.View style={{ flex: 1, transform: [{ translateY }] }}>
+        <View style={commonStyles.container}>
+          <View style={styles.header}>
+            <Text style={styles.brandText}>Welcome to</Text>
           </View>
+          <Image
+            source={require("@/assets/images/taxitaxi-logo.png")}
+            style={{
+              width: "100%",
+              height: 300,
+            }}
+          />
+          <View style={[commonStyles.column]} className="flex-1 bg-slate-200">
+            <Text style={styles.sectionTitle}>
+              Login with your Phone Number
+            </Text>
+            <TextInput
+              textContentType="telephoneNumber"
+              placeholder="eg. 9841232587"
+              keyboardType="number-pad"
+              returnKeyType="done"
+              clearButtonMode="always"
+              value={phone}
+              placeholderTextColor="#929292ff"
+              maxLength={10}
+              onChangeText={(txt) => {
+                setPhone(txt.replaceAll("-", ""));
+              }}
+              allowFontScaling={false}
+              style={[
+                commonStyles.input,
+                commonStyles.textAlignCenter,
+                { backgroundColor: "#fff" },
+              ]}
+            />
+            <View style={commonStyles.row}>
+              <TouchableButton
+                disabled={phone?.length !== 10}
+                onPress={triggerOtp}
+                style={[commonStyles.button]}
+              >
+                <Text style={[commonStyles.buttonText]}>Send OTP</Text>
+              </TouchableButton>
+            </View>
+          </View>
+          <Text style={styles.disclaimer}>
+            By Continuing, You Agree to the Red Taxi's{" "}
+            <Text style={styles.link}>Terms & Conditions</Text> And{" "}
+            <Text style={styles.link}>Privacy Policy</Text>
+          </Text>
         </View>
-        <Text style={styles.disclaimer}>
-          By Continuing, You Agree to the Red Taxi's{" "}
-          <Text style={styles.link}>Terms & Conditions</Text> And{" "}
-          <Text style={styles.link}>Privacy Policy</Text>
-        </Text>
-      </View>
-    </Animated.View>
+      </Animated.View>
+      {/* </KeyboardAvoidingView> */}
+    </SafeAreaView>
   );
 }
 

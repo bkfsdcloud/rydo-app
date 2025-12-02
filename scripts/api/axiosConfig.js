@@ -24,7 +24,7 @@ ErrorUtils.setGlobalHandler((error, isFatal) => {
     );
   } else {
     // Non-fatal errors can be logged
-    console.error(error);
+    console.error("Non Fatal error: ", error);
   }
 });
 

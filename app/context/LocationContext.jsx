@@ -12,6 +12,7 @@ export const LocationProvider = ({ children }) => {
     longitude: 76.97031, // center longitude
     radius: 90000, // in meters
   };
+  const [locationEnabled, setLocationEnabled] = useState(false);
 
   const [location, setLocation] = useState({
     lat: 12.9716,
@@ -32,17 +33,32 @@ export const LocationProvider = ({ children }) => {
 
   const getCurrentLocation = async () => {
     try {
+      const isEnabled = await Location.hasServicesEnabledAsync();
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("Location Error", "Permission to access location denied");
+
+      if (!isEnabled) {
+        Alert.alert("Location Required", "Please enable GPS to continue.");
+        setLocationEnabled(false);
         return;
       }
+
+      console.log("Location status: ", status);
+      if (status !== "granted") {
+        setLocationEnabled(false);
+        Alert.alert(
+          "Location Required",
+          "Permission to access location denied"
+        );
+        return;
+      }
+      setLocationEnabled(true);
       const pos = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
       setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-      console.log("GPS updating: ", location);
+      console.log("GPS updating: ", pos);
     } catch (err) {
+      console.error("Location Error: ", err.message);
       Alert.alert("Location Error", err.message);
     }
   };
@@ -53,8 +69,10 @@ export const LocationProvider = ({ children }) => {
 
     const watch = Location.watchPositionAsync(
       { accuracy: Location.Accuracy.High, distanceInterval: 10 },
-      (pos) =>
-        setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+      (pos) => {
+        console.log("Watch GPS updating: ", pos);
+        setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      }
     );
 
     return () => {
@@ -63,8 +81,8 @@ export const LocationProvider = ({ children }) => {
   }, []);
 
   const value = useMemo(
-    () => ({ location, accessible }),
-    [location, accessible]
+    () => ({ location, accessible, locationEnabled }),
+    [location, accessible, locationEnabled]
   );
 
   return (

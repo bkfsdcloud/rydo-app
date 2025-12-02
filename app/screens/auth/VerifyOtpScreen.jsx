@@ -5,6 +5,7 @@ import { commonStyles } from "@/scripts/constants";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const VerifyOtpScreen = () => {
   const route = useRoute();
@@ -111,50 +112,57 @@ const VerifyOtpScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Verify OTP</Text>
-      <Text style={styles.subtitle}>
-        Please Enter the OTP Sent to your Phone.
-      </Text>
+    <SafeAreaView style={commonStyles.safeArea}>
+      {/* <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      > */}
+      <View style={styles.container}>
+        <Text style={styles.title}>Verify OTP</Text>
+        <Text style={styles.subtitle}>
+          Please Enter the OTP Sent to your Phone.
+        </Text>
 
-      <View style={styles.otpRow}>
-        {otp.map((val, i) => (
-          <TextInput
-            key={i}
-            ref={inputRefs[i]}
-            style={styles.otpBox}
-            keyboardType="number-pad"
-            maxLength={1}
-            value={val}
-            onChangeText={(text) => onChangeText(text, i)}
-            onKeyPress={handleKeyPress(i)}
-            returnKeyType="done"
-            textAlign="center"
-          />
-        ))}
+        <View style={styles.otpRow}>
+          {otp.map((val, i) => (
+            <TextInput
+              key={i}
+              ref={inputRefs[i]}
+              style={styles.otpBox}
+              keyboardType="number-pad"
+              maxLength={1}
+              value={val}
+              onChangeText={(text) => onChangeText(text, i)}
+              onKeyPress={handleKeyPress(i)}
+              returnKeyType="done"
+              textAlign="center"
+            />
+          ))}
+        </View>
+
+        <View style={styles.bottomSpacer} />
+
+        <View style={styles.bottomBar}>
+          <TouchableButton
+            style={commonStyles.button}
+            disabled={time !== 0}
+            onPress={triggerOtp}
+          >
+            <Text style={styles.buttonText}>
+              Resend OTP {time > 0 ? `(${time}s)` : ""}
+            </Text>
+          </TouchableButton>
+          <TouchableButton
+            style={commonStyles.button}
+            disabled={getOtpValue()?.length !== 6}
+            onPress={verifyOtpInt}
+          >
+            <Text style={styles.buttonText}>Verify OTP</Text>
+          </TouchableButton>
+        </View>
       </View>
-
-      <View style={styles.bottomSpacer} />
-
-      <View style={styles.bottomBar}>
-        <TouchableButton
-          style={commonStyles.button}
-          disabled={time !== 0}
-          onPress={triggerOtp}
-        >
-          <Text style={styles.buttonText}>
-            Resend OTP {time > 0 ? `(${time}s)` : ""}
-          </Text>
-        </TouchableButton>
-        <TouchableButton
-          style={commonStyles.button}
-          disabled={getOtpValue()?.length !== 6}
-          onPress={verifyOtpInt}
-        >
-          <Text style={styles.buttonText}>Verify OTP</Text>
-        </TouchableButton>
-      </View>
-    </View>
+      {/* </KeyboardAvoidingView> */}
+    </SafeAreaView>
   );
 };
 
@@ -165,25 +173,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#ffffff",
   },
-  topBar: {
-    height: 44,
-    justifyContent: "center",
-    paddingHorizontal: 12,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  backText: {
-    fontSize: 28,
-    color: "#111",
-  },
   title: {
     fontSize: 32,
     fontWeight: "700",
-    marginTop: 6,
     marginHorizontal: 16,
     color: "#111",
   },
@@ -209,18 +201,14 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: "#000",
   },
-  bottomSpacer: {
-    flex: 1,
-  },
   bottomBar: {
     flexDirection: "row",
+    flex: 1,
     gap: 10,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    alignItems: "center",
+    alignItems: "flex-end",
     justifyContent: "space-between",
-    // keep above safe area on devices with home indicator
-    borderTopWidth: 0,
   },
   btnGrey: {
     flex: 1,

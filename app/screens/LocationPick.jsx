@@ -40,6 +40,7 @@ export default function LocationPick() {
   const mapRef = useRef(null);
   const [isAnimating, setIsAnimating] = useState(false);
 
+  const [panelTitle, setPanelTitle] = useState("");
   const [refObj, setRefObj] = useState(null);
   const [bottomView, setBottomView] = useState("DEFAULT");
   const favNameRef = useRef(null);
@@ -121,6 +122,7 @@ export default function LocationPick() {
       ? origin
       : destination;
     setRefObj(favObjData);
+    setPanelTitle("Set Your Favourite");
     setBottomView("FAV");
     sheetRef.current?.expand();
   };
@@ -190,7 +192,7 @@ export default function LocationPick() {
         </TouchableOpacity>
       </View>
 
-      <BottomPanel>
+      <BottomPanel title={panelTitle}>
         {bottomView === "DEFAULT" && (
           <View style={[commonStyles.column]}>
             <LocationInput
@@ -240,6 +242,7 @@ export default function LocationPick() {
                 });
                 setRefObj(null);
                 setBottomView("DEFAULT");
+                setPanelTitle("");
                 sheetRef.current?.expand();
                 const resp = await allFavourites();
                 setFavourites(resp.data);

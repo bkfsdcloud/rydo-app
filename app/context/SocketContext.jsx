@@ -77,7 +77,7 @@ export const SocketProvider = ({ children }) => {
     };
 
     socket.onerror = (err) => {
-      console.log("❌ WebSocket Error:", err.message);
+      console.log("❌ WebSocket Error:", err, err.message);
     };
 
     socket.onclose = () => {

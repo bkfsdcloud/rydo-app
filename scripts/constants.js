@@ -11,6 +11,7 @@ export const ORIGIN = "origin";
 export const DESTINATION = "destination";
 
 export const commonStyles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: "#fff" },
   container: { flex: 1, backgroundColor: "#fff", padding: 10 },
   map: { flex: 1 },
   overlayContainer: {

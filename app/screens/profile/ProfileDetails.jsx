@@ -1,4 +1,5 @@
 import AuthContext from "@/app/context/AuthContext";
+import LocationContext from "@/app/context/LocationContext";
 import useUserStore from "@/app/store/useUserStore";
 import { updateLastLocation } from "@/scripts/api/userApi";
 import { commonStyles } from "@/scripts/constants";
@@ -9,10 +10,12 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function ProfileDetails() {
   const { user, logout } = useContext(AuthContext);
+  const { location } = useContext(LocationContext);
   const navigation = useNavigation();
   const { driverStatus } = useUserStore();
 
   const updateAndLogout = async () => {
+    console.log("user?.role: ", user?.role);
     if (user?.role === "DRIVER") {
       const body = {
         lat: location.lat,
@@ -91,7 +94,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 15,
     textAlign: "center",
   },
   subtitle: {

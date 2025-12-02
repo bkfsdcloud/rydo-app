@@ -1,13 +1,43 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { FlatList, StyleSheet, Text, View } from "react-native";
 
 export default function Notifications({ navigation }) {
-  return (
-    <View style={styles.container}>
-      <View style={styles.empty}>
-        <Text style={{ fontSize: 22, fontWeight: "400" }}>
-          No Notifications
+  const renderItem = ({ item }) => {
+    const isNegative = item.type === "RIDE_PAYMENT" || item.amount < 0;
+    const amountColor = isNegative ? "#e74c3c" : "#16a085";
+    const bgColor = isNegative ? "#f2d5d9" : "#d6f7e6";
+
+    return (
+      <View style={styles.row}>
+        <View style={[styles.iconCircle, { backgroundColor: bgColor }]}>
+          <Ionicons
+            name={isNegative ? "car-outline" : "card-outline"}
+            size={22}
+            color={amountColor}
+          ></Ionicons>
+        </View>
+        <Text style={[styles.rowAmount, { color: amountColor }]}>
+          {isNegative ? "-" : "+"}₹
+          {item.amount < 0 ? item.amount * -1 : item.amount}
         </Text>
       </View>
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      <FlatList
+        data={[]}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <Text style={{ textAlign: "center", marginTop: 20 }}>
+            No Notifications
+          </Text>
+        }
+      />
     </View>
   );
 }

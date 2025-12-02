@@ -2,7 +2,11 @@ import { commonStyles } from "@/scripts/constants";
 import { Ionicons } from "@expo/vector-icons";
 import polylineTool from "@mapbox/polyline";
 import { useRoute } from "@react-navigation/native";
-import React, { useMemo, useRef, useState } from "react";
+import { lineString, point } from "@turf/helpers";
+import length from "@turf/length";
+import lineSlice from "@turf/line-slice";
+import nearestPointOnLine from "@turf/nearest-point-on-line";
+import React, { useContext, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Image,
@@ -14,96 +18,201 @@ import {
 import MapView, { AnimatedRegion, Marker, Polyline } from "react-native-maps";
 import { RenderHTML } from "react-native-render-html";
 import { getBearing, getTurnIcon } from "../../scripts/GeoUtil";
+import LocationContext from "../context/LocationContext";
 
 const AnimatedMarker = Animated.createAnimatedComponent(Marker);
 
 export default function CarNavigation() {
   const { width } = useWindowDimensions();
+  const { location } = useContext(LocationContext);
 
   const [bearing, setBearing] = useState(0);
   const route = useRoute();
-  const { steps } = route.params;
+  const { steps, localPolyline } = route.params;
   const [step, setStep] = useState({});
   const [spoints, setSpoints] = useState([]);
-  // const [index, setIndex] = useState(0);
   const mapRef = useRef(null);
 
+  const [index, setIndex] = useState(0);
+  const indexRef = useRef(0);
+  const [stepPoints, setStepPoints] = useState([]);
+  const [polyline, setPolyline] = useState([]);
+  const [allSteps, setAllSteps] = useState([]);
   const cancelRef = useRef(true);
+  const prevLocationRef = useRef(null);
   // const [carpoint, setCarpoint] = useState([]);
 
   // Start the navigation
   React.useEffect(() => {
     // prepareAllPoints(steps);
-    console.log(initialRegion);
-  }, []);
+    console.log("location changed: ", location);
+    if (!cancelRef.current) {
+      startNavigation1();
+    }
+  }, [location]);
 
   const initialRegion = useMemo(
     () => ({
-      latitude: steps[0].start_location.lat,
-      longitude: steps[0].start_location.lng,
+      latitude: location.lat,
+      longitude: location.lng,
       latitudeDelta: 0.003,
       longitudeDelta: 0.003,
     }),
-    [steps[0].start_location]
+    [location.lat, location.lng]
   );
 
-  const startNavigation = async () => {
-    // cancelled = true;
-    // console.log("index: ", index, steps.length);
+  const preparePoints = () => {
+    const locaSteps = [];
+    const coords = [];
+    const tempPolyline = [];
+    localPolyline?.forEach((poly) => {
+      tempPolyline.push([poly.longitude, poly.latitude]);
+    });
+    setPolyline(tempPolyline);
+    console.log("steps: ", steps.length);
+    for (let i = 0; i < steps.length; i++) {
+      const nextStep = steps[i];
+      locaSteps.push(nextStep);
 
-    try {
-      for (let i = 0; i < steps.length; i++) {
-        console.log("index: ", i);
-
-        const nextStep = steps[i];
-        setStep(nextStep);
-
-        const spoint = polylineTool.decode(nextStep.polyline?.points);
-        const coords = [];
-        spoint.forEach(([lat, lng]) =>
-          coords.push({ latitude: lat, longitude: lng })
-        );
-        setSpoints(coords);
-
-        const bearing = getBearing(
-          nextStep.start_location,
-          nextStep.end_location
-        );
-        // console.log("bearing: ", bearing);
-        for (let j = 1; j < coords.length; j++) {
-          const coordinate = coords[j];
-
-          // console.log("coordinate: ", coordinate);
-          mapRef.current?.animateCamera(
-            {
-              center: {
-                latitude: coordinate?.latitude,
-                longitude: coordinate?.longitude,
-              },
-              zoom: 20.5,
-              pitch: 60,
-              heading: bearing,
-            },
-            { duration: 1200 }
-          );
-          onLocationUpdate(coords[j - 1], coords[j]);
-          await new Promise((res, rej) =>
-            cancelRef.current
-              ? rej(new Error("Promise cancelled"))
-              : setTimeout(res, 800)
-          );
-        }
-        await new Promise((res, rej) =>
-          cancelRef.current
-            ? rej(new Error("Promise cancelled"))
-            : setTimeout(res, 10000)
-        );
-      }
-    } catch (e) {
-      console.log("Navigation cancelled: ", e);
+      const spoint = polylineTool.decode(nextStep.polyline?.points);
+      spoint.forEach(([lat, lng]) =>
+        coords.push({ latitude: lat, longitude: lng })
+      );
     }
+    setAllSteps(locaSteps);
+    setStepPoints(coords);
+  };
 
-    // setIndex(index + 1);
+  function distanceAlongToStep(user, step, polyline1) {
+    try {
+      const line = lineString(polyline);
+      const userPoint = point([user.lng, user.lat]);
+      const stepPoint = point([step.end_location.lng, step.end_location.lat]);
+
+      // snapped point
+      // console.log("userPoint: ", userPoint);
+      const snapped = nearestPointOnLine(line, userPoint);
+
+      // slice polyline between snapped point and maneuver point
+      const sliced = lineSlice(snapped, stepPoint, line);
+
+      return length(sliced, { units: "kilometers" }) * 1000;
+    } catch (error) {
+      console.log("Error in distanceAlongToStep", error.message);
+    }
+  }
+
+  // const startNavigation = async () => {
+  //   // cancelled = true;
+  //   // console.log("index: ", index, steps.length);
+
+  //   try {
+  //     for (let i = 0; i < steps.length; i++) {
+  //       console.log("index: ", i);
+
+  //       const nextStep = steps[i];
+  //       setStep(nextStep);
+
+  //       const spoint = polylineTool.decode(nextStep.polyline?.points);
+  //       const coords = [];
+  //       spoint.forEach(([lat, lng]) =>
+  //         coords.push({ latitude: lat, longitude: lng })
+  //       );
+  //       setSpoints(coords);
+
+  //       const bearing = getBearing(
+  //         nextStep.start_location,
+  //         nextStep.end_location
+  //       );
+  //       // console.log("bearing: ", bearing);
+  //       for (let j = 1; j < coords.length; j++) {
+  //         const coordinate = coords[j];
+
+  //         console.log("coordinate: ", location);
+  //         mapRef.current?.animateCamera(
+  //           {
+  //             center: {
+  //               latitude: coordinate?.latitude,
+  //               longitude: coordinate?.longitude,
+  //             },
+  //             zoom: 20.5,
+  //             pitch: 60,
+  //             heading: bearing,
+  //           },
+  //           { duration: 1200 }
+  //         );
+  //         onLocationUpdate(coords[j - 1], coords[j]);
+  //         await new Promise((res, rej) =>
+  //           cancelRef.current
+  //             ? rej(new Error("Promise cancelled"))
+  //             : setTimeout(res, 800)
+  //         );
+  //       }
+  //       await new Promise((res, rej) =>
+  //         cancelRef.current
+  //           ? rej(new Error("Promise cancelled"))
+  //           : setTimeout(res, 10000)
+  //       );
+  //     }
+  //   } catch (e) {
+  //     console.log("Navigation cancelled: ", e);
+  //   }
+
+  //   // setIndex(index + 1);
+  // };
+
+  const startNavigation1 = async () => {
+    try {
+      const nextStep = steps[indexRef.current];
+      if (!nextStep) return;
+
+      const dist = distanceAlongToStep(location, nextStep, localPolyline);
+
+      console.log("Distance : ", dist);
+      animateCarForLocation();
+      setStep(nextStep);
+      if (dist < 10 && indexRef.current < steps.length - 1) {
+        indexRef.current += 1;
+        setIndex(indexRef.current);
+        return;
+      }
+
+      if (dist < 200 && dist > 150)
+        console.log(
+          `In ${Math.round(dist)} meters, ${nextStep.html_instructions}`
+        );
+    } catch (e) {
+      console.log("Navigation cancelled: ", e.message);
+    }
+  };
+
+  const animateCarForLocation = () => {
+    let bearing = 90;
+
+    if (prevLocationRef.current) {
+      bearing = getBearing(prevLocationRef.current, location);
+    }
+    prevLocationRef.current = location;
+    mapRef.current?.animateCamera(
+      {
+        center: {
+          latitude: location?.lat,
+          longitude: location?.lng,
+        },
+        zoom: 20.5,
+        pitch: 60,
+        heading: bearing,
+      },
+      { duration: 600 }
+    );
+    carPosition
+      .timing({
+        latitude: location.lat,
+        longitude: location.lng,
+        duration: 600,
+        useNativeDriver: false,
+      })
+      .start();
   };
 
   // function prepareAllPoints(steps) {
@@ -117,8 +226,8 @@ export default function CarNavigation() {
 
   const carPosition = useRef(
     new AnimatedRegion({
-      latitude: steps[0].start_location.lat,
-      longitude: steps[0].start_location.lat,
+      latitude: location.lat,
+      longitude: location.lng,
       latitudeDelta: 0.001,
       longitudeDelta: 0.001,
     })
@@ -138,7 +247,6 @@ export default function CarNavigation() {
   async function onLocationUpdate(prev, next) {
     const br = getBearing(prev, next);
     setBearing(br);
-
     animateCar(prev, next);
   }
 
@@ -161,7 +269,7 @@ export default function CarNavigation() {
       >
         {step && (
           <>
-            {step.start_location && step.start_location?.lat && (
+            {/* {step.start_location && step.start_location?.lat && (
               <Marker
                 pinColor="green"
                 coordinate={{
@@ -180,17 +288,28 @@ export default function CarNavigation() {
                 }}
                 anchor={{ x: 0.5, y: 0.5 }}
               ></Marker>
-            )}
-            {spoints?.length && (
-              <Polyline
-                coordinates={spoints}
-                strokeWidth={5}
-                strokeColor="blue"
-                geodesic={true}
-              />
-            )}
+            )} */}
           </>
         )}
+        {localPolyline?.length && (
+          <Polyline
+            coordinates={localPolyline}
+            strokeWidth={5}
+            strokeColor="blue"
+            geodesic={true}
+          />
+        )}
+        {steps.map((s, idx) => (
+          <Marker
+            key={"step-" + idx}
+            coordinate={{
+              latitude: s.start_location.lat,
+              longitude: s.start_location.lng,
+            }}
+            title={`Step ${idx + 1} : ${s.html_instructions}`}
+            pinColor={idx === index ? "blue" : "grey"}
+          />
+        ))}
         <AnimatedMarker
           coordinate={carPosition}
           style={{ transform: [{ rotate: `${bearing}deg` }] }}
@@ -207,6 +326,17 @@ export default function CarNavigation() {
             style={commonStyles.overlayIcon}
             onPress={() => {
               cancelRef.current = true;
+              prevLocationRef.current = null;
+              indexRef.current = 0;
+              setStep(null);
+              carPosition
+                .timing({
+                  latitude: location.lat,
+                  longitude: location.lng,
+                  duration: 600,
+                  useNativeDriver: false,
+                })
+                .start();
             }}
           >
             <Ionicons
@@ -220,11 +350,23 @@ export default function CarNavigation() {
             style={commonStyles.overlayIcon}
             onPress={() => {
               cancelRef.current = false;
-              startNavigation(steps);
             }}
           >
             <Ionicons
               name="navigate-outline"
+              size={20}
+              color={"#000"}
+              style={{ padding: 10 }}
+            ></Ionicons>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={commonStyles.overlayIcon}
+            onPress={() => {
+              preparePoints();
+            }}
+          >
+            <Ionicons
+              name="beer-outline"
               size={20}
               color={"#000"}
               style={{ padding: 10 }}

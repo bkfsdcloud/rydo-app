@@ -1,7 +1,6 @@
 import SignUp from "@/app/screens/SignUp";
 import { Ionicons } from "@expo/vector-icons";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import React from "react";
 import { TouchableOpacity } from "react-native";
 import LoginScreen from "../../screens/auth/LoginScreen";
 import VerifyOtpScreen from "../../screens/auth/VerifyOtpScreen";

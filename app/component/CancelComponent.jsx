@@ -25,7 +25,8 @@ export default function CancelComponent({ visible, onClose }) {
   const [selectedMessage, setSelectedMessage] = useState(0);
   const [cancellationFee, setCancellationFee] = useState(0);
 
-  const isRejectFlow = () => status === "REQUESTED" && user?.role === "DRIVER";
+  const isRejectFlow = () =>
+    (status === "PENDING" || status === "REQUESTED") && user?.role === "DRIVER";
   const isModal = () => status !== "REQUESTED" && status !== "PENDING";
 
   useEffect(() => {
@@ -103,7 +104,9 @@ export default function CancelComponent({ visible, onClose }) {
       >
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
           <View style={commonStyles.column}>
-            <Text style={[commonStyles.title, { paddingTop: 0 }]}>Reason:</Text>
+            <Text style={[commonStyles.title, { paddingTop: 0 }]}>
+              Reason: {id}
+            </Text>
             {cancellationFee > 0 && (
               <Text style={[commonStyles.title, { marginBottom: 5 }]}>
                 Charges applicable: ₹{cancellationFee}

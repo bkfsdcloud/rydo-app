@@ -33,6 +33,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
 import SearchingModal from "../../component/SearchingModal";
 import RideSummaryModal from "../../screens/rider/RideSummaryModal";
 import { useRideStore } from "../../store/useRideStore";
@@ -75,6 +76,7 @@ export default function RideBooking() {
 
   const mapRef = useRef(null);
   const sheetRef = useRef(null);
+  const [steps, setSteps] = useState([]);
   const [closablePan, setClosablePan] = useState(false);
   const [panelTitle, setPanelTitle] = useState("");
   const [bottomView, setBottomView] = useState("DEFAULT");
@@ -168,6 +170,7 @@ export default function RideBooking() {
       destination: `${destination.coords.lat},${destination.coords.lng}`,
     });
 
+    setSteps(res.steps);
     const coordinates = [];
     for (let step of res.steps) {
       const stepPoints = polylineTool.decode(step.polyline?.points);
@@ -260,7 +263,7 @@ export default function RideBooking() {
   );
 
   return (
-    <>
+    <SafeAreaView style={commonStyles.safeArea}>
       <SearchingModal></SearchingModal>
       <View style={styles.container}>
         <View style={commonStyles.overlayContainer}>
@@ -313,7 +316,7 @@ export default function RideBooking() {
             }}
           >
             <Ionicons
-              name="beer-outline"
+              name="car-outline"
               size={20}
               color={"#000"}
               style={{ padding: 10 }}
@@ -392,6 +395,19 @@ export default function RideBooking() {
                 <Ionicons name="chatbubbles-outline" size={22}></Ionicons>
               </TouchableOpacity>
             )}
+            <TouchableOpacity
+              style={{
+                backgroundColor: "#fff",
+                borderRadius: "50%",
+                padding: 10,
+                alignSelf: "flex-end",
+              }}
+              onPress={() =>
+                navigation.navigate("CarNavigation", { steps, localPolyline })
+              }
+            >
+              <Ionicons name="map-outline" size={22}></Ionicons>
+            </TouchableOpacity>
           </View>
         </Animated.View>
 
@@ -569,7 +585,7 @@ export default function RideBooking() {
           )}
         </BottomPanel>
       </View>
-    </>
+    </SafeAreaView>
   );
 }
 

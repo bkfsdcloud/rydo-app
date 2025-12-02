@@ -74,14 +74,17 @@ export default function WalletTransaction() {
         </View>
       </View> */}
 
-      <Text style={styles.sectionTitle}>Recent Transactions</Text>
-
       <FlatList
         data={walletTransactions || []}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <Text style={{ textAlign: "center", marginTop: 20 }}>
+            No Transactions found
+          </Text>
+        }
       />
     </View>
   );

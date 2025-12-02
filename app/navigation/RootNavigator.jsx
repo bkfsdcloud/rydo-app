@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import React, { useContext } from "react";
+import { useContext } from "react";
 import { TouchableOpacity } from "react-native";
 import CarNavigation from "../component/CarNavigation";
 import AuthContext from "../context/AuthContext";
@@ -104,7 +104,7 @@ export default function RootNavigator() {
           <Stack.Screen
             name="WalletTransaction"
             component={WalletTransaction}
-            options={{ title: "Transaction" }}
+            options={{ title: "Transaction History" }}
           />
 
           <Stack.Screen

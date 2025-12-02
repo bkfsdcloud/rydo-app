@@ -14,13 +14,14 @@ import {
   useRef,
   useState,
 } from "react";
-import { StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
 import TouchableButton from "../../component/TouchableButton";
 import { useRideStore } from "../../store/useRideStore";
 
@@ -103,7 +104,7 @@ export default function MapScreen() {
       longitude: origin.coords?.lng,
     };
     const res = await available(body);
-    setDrivers(res.data?.drivers || []);
+    setDrivers(res.data || []);
   }, [origin?.coords?.lat, origin?.coords?.lng]);
 
   const trimSpace = (value) => (value ? value.trim() : value);
@@ -123,7 +124,7 @@ export default function MapScreen() {
             title={key.distance}
           >
             <View style={{ justifyContent: "center", alignItems: "center" }}>
-              <Ionicons name="car-outline" size={40} color="red" />
+              <Ionicons name="car-outline" size={40} color="green" />
             </View>
           </Marker>
         )),
@@ -141,6 +142,7 @@ export default function MapScreen() {
   );
 
   const recentreCurrentLocation = useCallback(() => {
+    console.log("location", location);
     updateMapLocation(location);
     setRecentre(true);
     mapRef.current?.animateToRegion({
@@ -152,227 +154,237 @@ export default function MapScreen() {
   }, [location.lat, location.lng]);
 
   return (
-    <View style={styles.container}>
-      <View style={commonStyles.overlayContainer}>
-        <TouchableButton
-          style={commonStyles.overlayIcon}
-          onPress={() => {
-            navigation.toggleDrawer();
-          }}
-        >
-          <Ionicons
-            name="menu-outline"
-            size={20}
-            color={"#000"}
-            style={{ padding: 10 }}
-          ></Ionicons>
-        </TouchableButton>
-        <TouchableButton
-          style={commonStyles.overlayIcon}
-          onPress={() => {
-            navigation.navigate("Notifications");
-          }}
-        >
-          <Ionicons
-            name="notifications-outline"
-            size={20}
-            color={"#000"}
-            style={{ padding: 10 }}
-          ></Ionicons>
-        </TouchableButton>
-      </View>
-
+    <SafeAreaView style={commonStyles.safeArea}>
       <View style={styles.container}>
-        <MapView
-          ref={mapRef}
-          paddingAdjustmentBehavior="automatic"
-          showsMyLocationButton={false}
-          provider="google"
-          style={styles.map}
-          showsUserLocation={true}
-          region={regions}
-          onRegionChangeStart={() => setRecentre(false)}
-          onRegionChangeComplete={(newRegion, { isGesture }) =>
-            onRegionChangeCompleteCb(newRegion, isGesture)
-          }
-        >
-          {driverMarkers}
-        </MapView>
-        {id === 0 && (
-          <View style={commonStyles.markerFixed}>
-            <Ionicons name="pin-outline" size={40} color="#E53935" />
-          </View>
-        )}
-        <Animated.View
-          style={[
-            {
-              position: "absolute",
-              bottom: 20,
-              right: 10,
-              zIndex: 999,
-              flexDirection: "row",
-              gap: 10,
-            },
-            floatingStyle,
-          ]}
-        >
+        <View style={commonStyles.overlayContainer}>
           <TouchableButton
-            style={{
-              backgroundColor: "#fff",
-              borderRadius: "50%",
-              padding: 8,
-              alignSelf: "flex-end",
+            style={commonStyles.overlayIcon}
+            onPress={() => {
+              navigation.toggleDrawer();
             }}
-            onPress={recentreCurrentLocation}
           >
             <Ionicons
-              name="locate-outline"
-              size={22}
-              color={recentre ? "blue" : "#000"}
+              name="menu-outline"
+              size={20}
+              color={"#000"}
+              style={{ padding: 10 }}
             ></Ionicons>
           </TouchableButton>
           <TouchableButton
-            style={{
-              backgroundColor: "#fff",
-              borderRadius: "50%",
-              padding: 8,
-              alignSelf: "flex-end",
+            style={commonStyles.overlayIcon}
+            onPress={() => {
+              navigation.navigate("Notifications");
             }}
-            onPress={checkAvailableDrivers}
           >
-            <Ionicons name="beer-outline" size={22} color={"#000"}></Ionicons>
+            <Ionicons
+              name="notifications-outline"
+              size={20}
+              color={"#000"}
+              style={{ padding: 10 }}
+            ></Ionicons>
           </TouchableButton>
-        </Animated.View>
-      </View>
+        </View>
 
-      <BottomPanel
-        ref={sheetRef}
-        onPositionChange={(height) => {
-          sheetY.set(height + 50);
-        }}
-      >
-        <View style={{}}>
-          {!accessible && (
-            <View>
-              <Text style={styles.title}>Set Pickup Location</Text>
-              <Text style={styles.subtitle}>
-                Move the map to adjust your pickup point
-              </Text>
-              <LocationInput
-                editable={false}
-                placeholder={
-                  originSearching
-                    ? "Fetching Location..."
-                    : "Select Pick Up Location"
-                }
-                value={
-                  originSearching
-                    ? ""
-                    : trimSpace(`${origin.description} ${origin.secondaryText}`)
-                }
-                onPress={() => {
-                  if (id && id > 0) return;
-                  navigation.navigate(
-                    "LocationSearch",
-                    { searchFor: ORIGIN },
-                    { merge: true }
-                  );
-                }}
-              />
+        <View style={styles.container}>
+          <MapView
+            ref={mapRef}
+            paddingAdjustmentBehavior="automatic"
+            showsMyLocationButton={false}
+            provider="google"
+            style={styles.map}
+            showsUserLocation={true}
+            region={regions}
+            onRegionChangeStart={() => setRecentre(false)}
+            onRegionChangeComplete={(newRegion, { isGesture }) =>
+              onRegionChangeCompleteCb(newRegion, isGesture)
+            }
+          >
+            {driverMarkers}
+          </MapView>
+          {id === 0 && (
+            <View style={commonStyles.markerFixed}>
+              <Ionicons name="pin-outline" size={40} color="#E53935" />
+            </View>
+          )}
+          <Animated.View
+            style={[
+              {
+                position: "absolute",
+                bottom: 20,
+                right: 10,
+                zIndex: 999,
+                flexDirection: "row",
+                gap: 10,
+              },
+              floatingStyle,
+            ]}
+          >
+            <TouchableButton
+              style={{
+                backgroundColor: "#fff",
+                borderRadius: "50%",
+                padding: 8,
+                alignSelf: "flex-end",
+              }}
+              onPress={recentreCurrentLocation}
+            >
+              <Ionicons
+                name="locate-outline"
+                size={22}
+                color={recentre ? "blue" : "#000"}
+              ></Ionicons>
+            </TouchableButton>
+            <TouchableButton
+              style={{
+                backgroundColor: "#fff",
+                borderRadius: "50%",
+                padding: 8,
+                alignSelf: "flex-end",
+              }}
+              onPress={checkAvailableDrivers}
+            >
+              <Ionicons name="car-outline" size={22} color={"#000"}></Ionicons>
+            </TouchableButton>
+          </Animated.View>
+        </View>
 
-              {!confirmLocation && (!id || id === 0) && (
-                <TouchableButton
-                  style={styles.button}
-                  disabled={searching}
-                  onPress={() => {
-                    setConfirmLocation(true);
-                    updateMapLocation();
-                  }}
-                >
-                  <Text style={styles.buttonText}>Confirm Location</Text>
-                </TouchableButton>
-              )}
-
-              {confirmLocation && (
-                <LocationInput
-                  editable={false}
-                  placeholder="Select Drop Location"
-                  value={trimSpace(
-                    `${destination.description} ${destination.secondaryText}`
-                  )}
+        <BottomPanel
+          ref={sheetRef}
+          onPositionChange={(height) => {
+            sheetY.set(height + 50);
+          }}
+        >
+          <View style={{}}>
+            {!accessible && (
+              <View>
+                <Text style={styles.title}>Set Pickup Location</Text>
+                <Text style={styles.subtitle}>
+                  Move the map to adjust your pickup point
+                </Text>
+                <Pressable
                   onPress={() => {
                     if (id && id > 0) return;
                     navigation.navigate(
                       "LocationSearch",
-                      {
-                        searchFor: DESTINATION,
-                        title: "Choose Drop Location",
-                      },
+                      { searchFor: ORIGIN },
                       { merge: true }
                     );
                   }}
-                  iconColor="red"
-                />
-              )}
+                >
+                  <LocationInput
+                    editable={false}
+                    placeholder={
+                      originSearching
+                        ? "Fetching Location..."
+                        : "Select Pick Up Location"
+                    }
+                    value={
+                      originSearching
+                        ? ""
+                        : trimSpace(
+                            `${origin.description} ${origin.secondaryText}`
+                          )
+                    }
+                  />
+                </Pressable>
 
-              {confirmLocation &&
-                destination.description &&
-                origin.description &&
-                !id && (
+                {!confirmLocation && (!id || id === 0) && (
+                  <TouchableButton
+                    style={styles.button}
+                    disabled={searching}
+                    onPress={() => {
+                      setConfirmLocation(true);
+                      updateMapLocation();
+                    }}
+                  >
+                    <Text style={styles.buttonText}>Confirm Location</Text>
+                  </TouchableButton>
+                )}
+
+                {confirmLocation && (
+                  <Pressable
+                    onPress={() => {
+                      if (id && id > 0) return;
+                      navigation.navigate(
+                        "LocationSearch",
+                        {
+                          searchFor: DESTINATION,
+                          title: "Choose Drop Location",
+                        },
+                        { merge: true }
+                      );
+                    }}
+                  >
+                    <LocationInput
+                      editable={false}
+                      placeholder="Select Drop Location"
+                      value={trimSpace(
+                        `${destination.description} ${destination.secondaryText}`
+                      )}
+                      iconColor="red"
+                    />
+                  </Pressable>
+                )}
+
+                {confirmLocation &&
+                  destination.description &&
+                  origin.description &&
+                  !id && (
+                    <TouchableButton
+                      style={commonStyles.button}
+                      onPress={() => {
+                        navigation.navigate("RideBooking");
+                      }}
+                    >
+                      <Text style={commonStyles.buttonText}>Search Ride</Text>
+                    </TouchableButton>
+                  )}
+                {confirmLocation && id > 0 && (
                   <TouchableButton
                     style={commonStyles.button}
                     onPress={() => {
                       navigation.navigate("RideBooking");
                     }}
                   >
-                    <Text style={commonStyles.buttonText}>Search Ride</Text>
+                    <Text style={commonStyles.buttonText}>View Ride</Text>
                   </TouchableButton>
                 )}
-              {confirmLocation && id > 0 && (
-                <TouchableButton
-                  style={commonStyles.button}
-                  onPress={() => {
-                    navigation.navigate("RideBooking");
+              </View>
+            )}
+            {accessible && (
+              <View>
+                <TextInput
+                  allowFontScaling={false}
+                  editable={false}
+                  value={origin.description}
+                  placeholder="Select Pick Up Location"
+                  placeholderTextColor={"grey"}
+                  style={styles.input}
+                />
+                <Text
+                  style={{
+                    fontSize: 14,
+                    fontWeight: "600",
+                    padding: 10,
+                    textAlign: "center",
                   }}
                 >
-                  <Text style={commonStyles.buttonText}>View Ride</Text>
+                  No Service available in this Area
+                </Text>
+                <TouchableButton
+                  style={styles.phoneBookingButton}
+                  onPress={() => {
+                    navigation.navigate("PhoneBooking");
+                  }}
+                >
+                  <Text style={styles.buttonText}>Phone Booking</Text>
                 </TouchableButton>
-              )}
-            </View>
-          )}
-          {accessible && (
-            <View>
-              <TextInput
-                allowFontScaling={false}
-                editable={false}
-                value={origin.description}
-                placeholder="Select Pick Up Location"
-                placeholderTextColor={"grey"}
-                style={styles.input}
-              />
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: "600",
-                  padding: 10,
-                  textAlign: "center",
-                }}
-              >
-                No Service available in this Area
-              </Text>
-              <TouchableButton
-                style={styles.phoneBookingButton}
-                onPress={() => {
-                  navigation.navigate("PhoneBooking");
-                }}
-              >
-                <Text style={styles.buttonText}>Phone Booking</Text>
-              </TouchableButton>
-            </View>
-          )}
-        </View>
-      </BottomPanel>
-    </View>
+              </View>
+            )}
+          </View>
+        </BottomPanel>
+      </View>
+    </SafeAreaView>
   );
 }
 

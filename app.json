@@ -1,23 +1,27 @@
 {
   "expo": {
-    "name": "rydo-app",
-    "slug": "rydo",
+    "name": "Taxi Taxi",
+    "slug": "Taxi_Taxi",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/taxitaxi-logo.png",
     "scheme": "rydoapp",
     "userInterfaceStyle": "automatic",
     "extra": {
       "eas": {
         "projectId": "20541a7f-745f-446d-a3ca-ab7fc03f6a25"
-      },
-      "router": {}
+      }
     },
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "config": {
         "googleMapsApiKey": "AIzaSyDqaqO6czuq1cTzTetNJU6yhnQP2b6_k8U"
+      },
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "We use your location to show nearby rides and navigation.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "We need your location for continuous tracking during rides.",
+        "NSLocationAlwaysUsageDescription": "We need your location for continuous tracking during rides."
       }
     },
     "android": {
@@ -30,15 +34,17 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "config": {
-        "googleMaps": { "apiKey": "AIzaSyDqaqO6czuq1cTzTetNJU6yhnQP2b6_k8U" }
-      }
+        "googleMaps": {
+          "apiKey": "AIzaSyDqaqO6czuq1cTzTetNJU6yhnQP2b6_k8U"
+        }
+      },
+      "package": "com.bk5916.TaxiTaxi"
     },
     "web": {
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router",
       [
         "expo-splash-screen",
         {
@@ -53,7 +59,6 @@
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
       "reactCompiler": true
     },
     "owner": "bk5916"

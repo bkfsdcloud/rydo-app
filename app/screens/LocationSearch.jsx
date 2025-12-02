@@ -18,6 +18,7 @@ export default function LocationSearch() {
 
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestionDropdown, setShowSuggestionDropdown] = useState(false);
+  const [panelTitle, setPanelTitle] = useState("");
 
   const locationDebounce = useRef(null);
   const [searchFor] = useState(route?.params?.searchFor || null);
@@ -62,11 +63,13 @@ export default function LocationSearch() {
   const addFavourite = (data) => {
     setRefObj(data);
     setBottomView("FAV");
+    setPanelTitle("Set Your Favourite");
     sheetRef.current?.expand();
   };
 
   return (
-    <View style={[commonStyles.container, { backgroundColor: "#fff" }]}>
+    // <SafeAreaView style={commonStyles.safeArea}>
+    <View style={commonStyles.container}>
       <LocationInput
         placeholder="Search or Select Location"
         onChangeText={(text) => {
@@ -87,9 +90,9 @@ export default function LocationSearch() {
         showSuggestionDropdown={showSuggestionDropdown}
         setShowSuggestionDropdown={setShowSuggestionDropdown}
         handleSelectRecent={handleSelectRecent}
-        addFavourite={addFavourite}
+        onAddFavourite={addFavourite}
       />
-      <BottomPanel ref={sheetRef}>
+      <BottomPanel ref={sheetRef} title={panelTitle}>
         {bottomView === "DEFAULT" && (
           <View style={commonStyles.column}>
             <Text style={[commonStyles.banner, { alignSelf: "center" }]}>
@@ -135,6 +138,7 @@ export default function LocationSearch() {
                   name: favNameRef.current.value,
                 });
                 setBottomView("DEFAULT");
+                setPanelTitle("");
                 sheetRef.current?.expand();
                 const resp = await allFavourites();
                 setFavourites(resp.data);
@@ -146,6 +150,7 @@ export default function LocationSearch() {
         )}
       </BottomPanel>
     </View>
+    // </SafeAreaView>
   );
 }
 

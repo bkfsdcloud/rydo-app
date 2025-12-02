@@ -15,13 +15,21 @@ import {
   useRef,
   useState,
 } from "react";
-import { Alert, Text, TouchableOpacity, View } from "react-native";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { handleGetRoute } from "../../../scripts/api/geoApi";
 import { updateStatus } from "../../../scripts/api/riderApi";
 import { commonStyles } from "../../../scripts/constants";
@@ -93,10 +101,12 @@ export default function DriverHome() {
 
   useEffect(() => {
     if (statusRef.current) return;
+    console.log("tempLocation.current: ", tempLocation.current);
+
     if (status === "PENDING") {
       showAlert({
         title: "Ride Request!",
-        message: `Distance : ${distance}km Estimated Fare ₹${fare} Earnings: ₹${driverEarning}`,
+        message: `Distance : ${distance}km Estimated Fare ₹${fare} Earnings: ₹${driverEarning} - ${id}`,
         leftText: "Reject",
         rightText: "Accept",
         onLeft: handleReject,
@@ -172,7 +182,6 @@ export default function DriverHome() {
 
   const handleReject = useCallback(async (rideInfo) => {
     setShowCancelTab(true);
-    setId(rideInfo?.id);
   }, []);
 
   const handleToPickup = useCallback(
@@ -382,13 +391,14 @@ export default function DriverHome() {
   );
 
   const recentreCurrentLocation = useCallback(() => {
+    console.log("location: ", location);
     mapRef.current?.animateToRegion({
       latitude: location.lat,
       longitude: location.lng,
       latitudeDelta: 0.003,
       longitudeDelta: 0.003,
     });
-  }, [location]);
+  }, [location.lat, location.lng]);
 
   const toggleDuty = useCallback(() => {
     const status = dutyStatus === "ACTIVE" ? "INACTIVE" : "ACTIVE";
@@ -402,26 +412,30 @@ export default function DriverHome() {
     });
   }, [dutyStatus, sendMessage]);
   return (
-    <>
-      <CancelComponent
-        visible={showCancelTab}
-        onClose={handleCancel}
-      ></CancelComponent>
-      <View style={commonStyles.overlayContainer}>
-        <TouchableOpacity
-          style={commonStyles.overlayIcon}
-          onPress={() => {
-            navigation.toggleDrawer();
-          }}
-        >
-          <Ionicons
-            name="menu-outline"
-            size={20}
-            color={"#000"}
-            style={{ padding: 10 }}
-          ></Ionicons>
-        </TouchableOpacity>
-        <TouchableOpacity
+    <SafeAreaView style={commonStyles.safeArea}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <CancelComponent
+          visible={showCancelTab}
+          onClose={handleCancel}
+        ></CancelComponent>
+        <View style={commonStyles.overlayContainer}>
+          <TouchableOpacity
+            style={commonStyles.overlayIcon}
+            onPress={() => {
+              navigation.toggleDrawer();
+            }}
+          >
+            <Ionicons
+              name="menu-outline"
+              size={20}
+              color={"#000"}
+              style={{ padding: 10 }}
+            ></Ionicons>
+          </TouchableOpacity>
+          {/* <TouchableOpacity
           style={commonStyles.overlayIcon}
           onPress={toggleDuty}
           disabled={status !== null}
@@ -432,38 +446,55 @@ export default function DriverHome() {
             size={20}
             style={{ padding: 10 }}
           ></Ionicons>
-        </TouchableOpacity>
-      </View>
-      <View style={{ flex: 1 }}>
-        <MapView
-          style={{ flex: 1 }}
-          ref={mapRef}
-          provider="google"
-          showsUserLocation={true}
-          showsMyLocationButton={false}
-          region={regions}
-          onRegionChangeComplete={(newRegion, { isGesture }) =>
-            onRegionChangeCompleteCb(newRegion, isGesture)
-          }
-        >
-          {originMarkerCb}
-          {destMarkerCb}
-          {polyLineCb}
-        </MapView>
-        <Animated.View
-          style={[
-            {
-              position: "absolute",
-              right: 20,
-              bottom: 30,
-              zIndex: 999,
-              flexDirection: "row",
-              gap: 10,
-            },
-            floatingStyle,
-          ]}
-        >
-          {steps?.length > 0 && (
+        </TouchableOpacity> */}
+        </View>
+        <View style={{ flex: 1 }}>
+          <MapView
+            style={{ flex: 1 }}
+            ref={mapRef}
+            provider="google"
+            showsUserLocation={true}
+            showsMyLocationButton={false}
+            region={regions}
+            onRegionChangeComplete={(newRegion, { isGesture }) =>
+              onRegionChangeCompleteCb(newRegion, isGesture)
+            }
+          >
+            {originMarkerCb}
+            {destMarkerCb}
+            {polyLineCb}
+          </MapView>
+          <Animated.View
+            style={[
+              {
+                position: "absolute",
+                right: 20,
+                bottom: 30,
+                zIndex: 999,
+                flexDirection: "row",
+                gap: 10,
+              },
+              floatingStyle,
+            ]}
+          >
+            {steps?.length > 0 && (
+              <TouchableOpacity
+                style={{
+                  backgroundColor: "#fff",
+                  borderRadius: "50%",
+                  padding: 10,
+                  alignSelf: "flex-end",
+                }}
+                onPress={() => navigation.navigate("CarNavigation", { steps })}
+              >
+                <Ionicons
+                  name="navigate-outline"
+                  size={22}
+                  color={"#000"}
+                  style={{}}
+                ></Ionicons>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={{
                 backgroundColor: "#fff",
@@ -471,145 +502,129 @@ export default function DriverHome() {
                 padding: 10,
                 alignSelf: "flex-end",
               }}
-              onPress={() => navigation.navigate("CarNavigation", { steps })}
+              onPress={recentreCurrentLocation}
             >
               <Ionicons
-                name="navigate-outline"
+                name="locate-outline"
                 size={22}
                 color={"#000"}
                 style={{}}
               ></Ionicons>
             </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            style={{
-              backgroundColor: "#fff",
-              borderRadius: "50%",
-              padding: 10,
-              alignSelf: "flex-end",
-            }}
-            onPress={recentreCurrentLocation}
-          >
-            <Ionicons
-              name="locate-outline"
-              size={22}
-              color={"#000"}
-              style={{}}
-            ></Ionicons>
-          </TouchableOpacity>
-          {status && !["REQUESTED"].includes(status) && (
-            <TouchableOpacity
-              style={{
-                backgroundColor: "#fff",
-                borderRadius: "50%",
-                padding: 10,
-                alignSelf: "flex-end",
-              }}
-              onPress={() => {
-                setBottomView("CHAT");
-                setClosablePan(true);
-                setPanelTitle("Chat");
-                sheetRef.current?.expand();
-              }}
-            >
-              <Ionicons name="chatbubbles-outline" size={22}></Ionicons>
-            </TouchableOpacity>
-          )}
-        </Animated.View>
-      </View>
-      <BottomPanel
-        enablePanClose={closablePan}
-        ref={sheetRef}
-        title={panelTitle}
-        onPositionChange={(height) => {
-          sheetY.set(height + 50);
-        }}
-        onClose={setDefault}
-      >
-        {bottomView === "DEFAULT" && (
-          <View>
-            <View style={commonStyles.row}>
-              {status && (
-                <Text style={{ fontSize: 22, marginBottom: 5 }}>
-                  Status: {status} - {id}
-                </Text>
-              )}
-            </View>
+            {status && !["REQUESTED"].includes(status) && (
+              <TouchableOpacity
+                style={{
+                  backgroundColor: "#fff",
+                  borderRadius: "50%",
+                  padding: 10,
+                  alignSelf: "flex-end",
+                }}
+                onPress={() => {
+                  setBottomView("CHAT");
+                  setClosablePan(true);
+                  setPanelTitle("Chat");
+                  sheetRef.current?.expand();
+                }}
+              >
+                <Ionicons name="chatbubbles-outline" size={22}></Ionicons>
+              </TouchableOpacity>
+            )}
+          </Animated.View>
+        </View>
+        <BottomPanel
+          enablePanClose={closablePan}
+          ref={sheetRef}
+          title={panelTitle}
+          onPositionChange={(height) => {
+            sheetY.set(height + 50);
+          }}
+          onClose={setDefault}
+        >
+          {bottomView === "DEFAULT" && (
+            <View>
+              <View style={commonStyles.row}>
+                {status && (
+                  <Text style={{ fontSize: 22, marginBottom: 5 }}>
+                    Status: {status} - {id}
+                  </Text>
+                )}
+              </View>
 
-            <View style={commonStyles.column}>
-              {status === "ASSIGNED" && localPolyline?.length > 0 && (
-                <TouchableOpacity
-                  style={[commonStyles.button, { backgroundColor: "green" }]}
-                  onPress={() => {
-                    handleToPickup("ARRIVED");
-                  }}
-                >
-                  <Text style={commonStyles.buttonText}>
-                    Reached Pickup Point
-                  </Text>
-                </TouchableOpacity>
-              )}
-              {status === "ARRIVED" && (
-                <TouchableOpacity
-                  style={[commonStyles.button, { backgroundColor: "green" }]}
-                  onPress={() => {
-                    handleStart();
-                  }}
-                >
-                  <Text style={commonStyles.buttonText}>Start Ride</Text>
-                </TouchableOpacity>
-              )}
-              {status === "ONGOING" && (
-                <TouchableOpacity
-                  style={[commonStyles.button, { backgroundColor: "red" }]}
-                  onPress={() => {
-                    handleComplete();
-                  }}
-                >
-                  <Text style={commonStyles.buttonText}>Complete Ride</Text>
-                </TouchableOpacity>
-              )}
-              {!status && (
-                <TouchableOpacity
-                  style={[
-                    commonStyles.button,
-                    {
-                      backgroundColor:
-                        dutyStatus === "ACTIVE" ? "grey" : "green",
-                    },
-                  ]}
-                  onPress={toggleDuty}
-                >
-                  <Text style={commonStyles.buttonText}>
-                    {dutyStatus === "ACTIVE" ? "Duty Off" : "Duty On"}
-                  </Text>
-                </TouchableOpacity>
-              )}
-              {["ASSIGNED", "ARRIVED"].includes(status) && (
-                <TouchableOpacity
-                  style={[commonStyles.button, { backgroundColor: "red" }]}
-                  onPress={() => setShowCancelTab(true)}
-                >
-                  <Text style={commonStyles.buttonText}>Cancel Ride</Text>
-                </TouchableOpacity>
-              )}
+              <View style={commonStyles.column}>
+                {status === "ASSIGNED" && localPolyline?.length > 0 && (
+                  <TouchableOpacity
+                    style={[commonStyles.button, { backgroundColor: "green" }]}
+                    onPress={() => {
+                      handleToPickup("ARRIVED");
+                    }}
+                  >
+                    <Text style={commonStyles.buttonText}>
+                      Reached Pickup Point
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {status === "ARRIVED" && (
+                  <TouchableOpacity
+                    style={[commonStyles.button, { backgroundColor: "green" }]}
+                    onPress={() => {
+                      handleStart();
+                    }}
+                  >
+                    <Text style={commonStyles.buttonText}>Start Ride</Text>
+                  </TouchableOpacity>
+                )}
+                {status === "ONGOING" && (
+                  <TouchableOpacity
+                    style={[commonStyles.button, { backgroundColor: "red" }]}
+                    onPress={() => {
+                      handleComplete();
+                    }}
+                  >
+                    <Text style={commonStyles.buttonText}>Complete Ride</Text>
+                  </TouchableOpacity>
+                )}
+                {!status && (
+                  <TouchableOpacity
+                    style={[
+                      commonStyles.button,
+                      {
+                        backgroundColor:
+                          dutyStatus === "ACTIVE" ? "grey" : "green",
+                      },
+                    ]}
+                    onPress={toggleDuty}
+                  >
+                    <Text style={commonStyles.buttonText}>
+                      {dutyStatus === "ACTIVE" ? "Duty Off" : "Duty On"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {["ASSIGNED", "ARRIVED"].includes(status) && (
+                  <TouchableOpacity
+                    style={[commonStyles.button, { backgroundColor: "red" }]}
+                    onPress={() => setShowCancelTab(true)}
+                  >
+                    <Text style={commonStyles.buttonText}>Cancel Ride</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
-          </View>
-        )}
-        {bottomView === "CHAT" && <ChatScreen></ChatScreen>}
-        {bottomView === "RATE" && (
-          <RatingComponent
-            rideId={id}
-            riderId={riderId}
-            driverId={driverId}
-            onClose={() => {
-              setDefault();
-              resetRide();
-              setLocalPolyline([]);
-            }}
-          ></RatingComponent>
-        )}
-      </BottomPanel>
-    </>
+          )}
+          {bottomView === "CHAT" && <ChatScreen></ChatScreen>}
+          {bottomView === "RATE" && (
+            <RatingComponent
+              rideId={id}
+              riderId={riderId}
+              driverId={driverId}
+              onClose={() => {
+                setDefault();
+                resetRide();
+                setLocalPolyline([]);
+              }}
+            ></RatingComponent>
+          )}
+        </BottomPanel>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }

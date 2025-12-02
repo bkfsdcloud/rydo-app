@@ -85,7 +85,6 @@ export default function EditProfileScreen() {
           value={dob ? moment(dob).format("DD-MM-YYYY") : ""}
           placeholder={"DOB"}
           placeholderTextColor={"grey"}
-          editable={false}
           onPress={() => {
             sheetRef.current?.snapToIndex(0);
           }}

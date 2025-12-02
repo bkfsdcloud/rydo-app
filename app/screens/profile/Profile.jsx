@@ -5,11 +5,14 @@ import { useNavigation } from "@react-navigation/native";
 import { useContext } from "react";
 import {
   FlatList,
+  KeyboardAvoidingView,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import AuthContext from "../../context/AuthContext";
 
 export default function Profile() {
@@ -47,50 +50,57 @@ export default function Profile() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View
-          style={[
-            styles.avatarContainer,
-            {
-              width: 50,
-              height: 50,
-              borderRadius: 50 / 2,
-              backgroundColor: getColor(user?.name),
-            },
-          ]}
-        >
-          <Text style={[styles.avatarText, { fontSize: 50 / 2 }]}>
-            {user?.name.charAt(0)}
-          </Text>
-        </View>
-        <View style={{ marginLeft: 15 }}>
-          <Text style={styles.name}>{user?.name}</Text>
-          <Text style={styles.role}>+91 {user?.phone}</Text>
-        </View>
-      </View>
+    <SafeAreaView style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <View
+              style={[
+                styles.avatarContainer,
+                {
+                  width: 50,
+                  height: 50,
+                  borderRadius: 50 / 2,
+                  backgroundColor: getColor(user?.name),
+                },
+              ]}
+            >
+              <Text style={[styles.avatarText, { fontSize: 50 / 2 }]}>
+                {user?.name.charAt(0)}
+              </Text>
+            </View>
+            <View style={{ marginLeft: 15 }}>
+              <Text style={styles.name}>{user?.name}</Text>
+              <Text style={styles.role}>+91 {user?.phone}</Text>
+            </View>
+          </View>
 
-      <FlatList
-        data={menuItems}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => handleItemPress(item.route)}
-          >
-            <Ionicons name={item.icon} size={22} color="#333" />
-            <Text style={styles.menuText}>{item.title}</Text>
-            <Ionicons
-              name="chevron-forward-outline"
-              size={20}
-              color="#999"
-              style={styles.arrow}
-            />
-          </TouchableOpacity>
-        )}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-      />
-    </View>
+          <FlatList
+            data={menuItems}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => handleItemPress(item.route)}
+              >
+                <Ionicons name={item.icon} size={22} color="#333" />
+                <Text style={styles.menuText}>{item.title}</Text>
+                <Ionicons
+                  name="chevron-forward-outline"
+                  size={20}
+                  color="#999"
+                  style={styles.arrow}
+                />
+              </TouchableOpacity>
+            )}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
+          />
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -105,7 +115,11 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textTransform: "uppercase",
   },
-  container: { flex: 1, backgroundColor: "#f9f9f9", padding: 20 },
+  container: {
+    flex: 1,
+    backgroundColor: "#f9f9f9",
+    padding: 20,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
