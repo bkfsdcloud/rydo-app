@@ -5,7 +5,11 @@ import { TouchableOpacity } from "react-native";
 import CarNavigation from "../component/CarNavigation";
 import AuthContext from "../context/AuthContext";
 import AuthStack from "../navigation/auth/AuthStack";
+import Approvals from "../screens/admin/Approvals";
+import DocumentManagement from "../screens/admin/DocumentManagement";
+import Reports from "../screens/admin/Reports";
 import DrawerScreens from "../screens/DrawerScreen";
+import PaymentScreen from "../screens/payment/PaymentScreen";
 import ChatScreen from "../screens/profile/ChatScreen";
 import EditProfile from "../screens/profile/EditProfile";
 import Favorites from "../screens/profile/Favorites";
@@ -79,12 +83,18 @@ export default function RootNavigator() {
           <Stack.Screen
             name="Payments"
             component={Payments}
-            options={{ title: "Payments" }}
+            options={{ title: "Payment Methods" }}
           />
+          <Stack.Screen
+            name="PaymentScreen"
+            component={PaymentScreen}
+            options={{ title: "Payment" }}
+          />
+
           <Stack.Screen
             name="RideHistory"
             component={RideHistory}
-            options={{ title: "Booking History" }}
+            options={{ title: "Ride History" }}
           />
           <Stack.Screen
             name="Favorites"
@@ -136,6 +146,28 @@ export default function RootNavigator() {
             options={{
               StackBarIcon: ({ focused, color, size }) =>
                 placeIcon("map-outline", focused, color, size),
+            }}
+          />
+
+          <Stack.Screen
+            name="Approvals"
+            component={Approvals}
+            options={{
+              title: "Approvals",
+            }}
+          />
+          <Stack.Screen
+            name="Reports"
+            component={Reports}
+            options={{
+              title: "Analytics & Reports",
+            }}
+          />
+          <Stack.Screen
+            name="DocumentManagement"
+            component={DocumentManagement}
+            options={{
+              title: "Document Management",
             }}
           />
         </>

@@ -2,6 +2,7 @@ import BottomPanel from "@/app/component/BottomPanel";
 import AuthContext from "@/app/context/AuthContext";
 import useUserStore from "@/app/store/useUserStore";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import moment from "moment";
 import React, { useContext, useEffect } from "react";
 import {
@@ -16,6 +17,7 @@ import { rideHistoryDetails } from "../../../scripts/api/riderApi";
 import RatingComponent from "../../component/RatingComponent";
 
 export default function RideHistoryDetail() {
+  const navigation = useNavigation();
   const modalRef = React.useRef(null);
   const { user: userInfo } = useContext(AuthContext);
   const { rideInfo, setRideInfo } = useUserStore();
@@ -135,6 +137,24 @@ export default function RideHistoryDetail() {
             </View>
           </View>
         )}
+
+        <View style={styles.ratingRow}>
+          <Text style={styles.ratingTitle}>Payment</Text>
+          <View style={styles.ratingInfo}>
+            <TouchableOpacity
+              onPress={() => {
+                navigation.navigate("PaymentScreen", {
+                  rideId: rideInfo?.id,
+                  amount: rideInfo?.fare_estimated,
+                  upiId: "driver@ybl",
+                  name: "Driver",
+                });
+              }}
+            >
+              <Text>Init</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {rideInfo?.status === "COMPLETED" && (
           <View style={styles.ratingRow}>

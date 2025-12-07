@@ -2,7 +2,7 @@ import BottomPanel from "@/app/component/BottomPanel";
 import LocationInput from "@/app/component/LocationInput";
 import LocationContext from "@/app/context/LocationContext";
 import { getAddress } from "@/scripts/api/geoApi";
-import { available } from "@/scripts/api/riderApi";
+import { driverStatus } from "@/scripts/api/riderApi";
 import { commonStyles, DESTINATION, ORIGIN } from "@/scripts/constants";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -99,11 +99,11 @@ export default function MapScreen() {
   }, []);
 
   const checkAvailableDrivers = useCallback(async () => {
-    const body = {
+    const params = {
       latitude: origin.coords?.lat,
       longitude: origin.coords?.lng,
     };
-    const res = await available(body);
+    const res = await driverStatus(params);
     setDrivers(res.data || []);
   }, [origin?.coords?.lat, origin?.coords?.lng]);
 

@@ -28,13 +28,29 @@ export default function Profile() {
       icon: "person-outline",
       route: "ProfileDetails",
     },
-    { id: "2", title: "My Rides", icon: "car-outline", route: "RideHistory" },
-    { id: "3", title: "Payments", icon: "card-outline", route: "Payments" },
+    {
+      id: "2",
+      title: "Ride History",
+      icon: "car-outline",
+      route: "RideHistory",
+    },
+    {
+      id: "3",
+      title: "Payment Methods",
+      icon: "card-outline",
+      route: "Payments",
+    },
     {
       id: "4",
       title: "Notifications",
       icon: "notifications-outline",
       route: "Notifications",
+    },
+    {
+      id: "4",
+      title: "Reports",
+      icon: "notifications-outline",
+      route: "Reports",
     },
     // { id: "5", title: "Favorites", icon: "heart-outline", route: "Favorites" },
   ];

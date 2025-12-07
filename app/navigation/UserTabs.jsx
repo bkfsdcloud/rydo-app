@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import React from "react";
 import RiderStack from "../navigation/RiderStack";
 import AdminDashboard from "../screens/admin/AdminDashboard";
+import DriverManagement from "../screens/admin/DriverManagement";
 import DriverHome from "../screens/driver/DriverHome";
 
 const Stack = createNativeStackNavigator();
@@ -48,6 +49,13 @@ export function AdminStacks() {
         options={{
           StackBarIcon: ({ focused, color, size }) =>
             placeIcon("settings-outline", focused, color, size),
+        }}
+      />
+      <Stack.Screen
+        name="DriverManagement"
+        component={DriverManagement}
+        options={{
+          title: "Driver Management",
         }}
       />
     </Stack.Navigator>

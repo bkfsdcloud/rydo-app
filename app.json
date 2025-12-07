@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/taxitaxi-logo.png",
-    "scheme": "rydoapp",
+    "scheme": "taxitaxi",
     "userInterfaceStyle": "automatic",
     "extra": {
       "eas": {
@@ -38,7 +38,7 @@
           "apiKey": "AIzaSyDqaqO6czuq1cTzTetNJU6yhnQP2b6_k8U"
         }
       },
-      "package": "com.bk5916.TaxiTaxi"
+      "package": "com.adroitfirm.taxitaxi"
     },
     "web": {
       "output": "single",
@@ -61,6 +61,6 @@
     "experiments": {
       "reactCompiler": true
     },
-    "owner": "bk5916"
+    "owner": "adroitfirm"
   }
 }

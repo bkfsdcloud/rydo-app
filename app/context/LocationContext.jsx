@@ -56,7 +56,6 @@ export const LocationProvider = ({ children }) => {
         accuracy: Location.Accuracy.High,
       });
       setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-      console.log("GPS updating: ", pos);
     } catch (err) {
       console.error("Location Error: ", err.message);
       Alert.alert("Location Error", err.message);
@@ -69,10 +68,8 @@ export const LocationProvider = ({ children }) => {
 
     const watch = Location.watchPositionAsync(
       { accuracy: Location.Accuracy.High, distanceInterval: 10 },
-      (pos) => {
-        console.log("Watch GPS updating: ", pos);
-        setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-      }
+      (pos) =>
+        setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
     );
 
     return () => {
